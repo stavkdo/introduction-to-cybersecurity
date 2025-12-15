@@ -1,18 +1,19 @@
-from fastapi import FastAPI, Depends, HTTPException, Request
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 from pydantic import BaseModel
-import hashlib
-import secrets
 from jose import jwt
 from datetime import datetime, timedelta
+import json
 import time
-import os
+import logging
 
-from .database import engine, Base, get_db, User, AttemptLog
-
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Setup logging (simple!)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # FastAPI app
 app = FastAPI(title="Password Auth Research")
@@ -26,108 +27,129 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SECRET_KEY = os.getenv("SECRET_KEY", "secret")
+# Config (simple!)
+SECRET_KEY = "your-secret-key"
+GROUP_SEED = 211245440
+
+# Storage
+attempts = []
 
 # Schemas
 class LoginRequest(BaseModel):
     username: str
     password: str
 
-class LoginResponse(BaseModel):
-    success: bool
-    message: str
-    token: str = None
-    user: dict = None
+# Helpers
+def load_users():
+    """Load users from JSON file"""
+    try:
+        with open('users.json', 'r') as f:
+            users = json.load(f)
+        logger.info(f"Loaded {len(users)} users")
+        return users
+    except FileNotFoundError:
+        logger.error("users.json not found!")
+        raise HTTPException(status_code=503, detail="Service unavailable")
 
-# Auth utilities
-def hash_password(password: str) -> tuple[str, str]:
-    salt = secrets.token_hex(32)
-    combined = salt + password
-    password_hash = hashlib.sha256(combined.encode()).hexdigest()
-    return password_hash, salt
-
-def verify_password(password: str, salt: str, hashed: str) -> bool:
-    combined = salt + password
-    return hashlib.sha256(combined.encode()).hexdigest() == hashed
-
-def create_token(username: str) -> str:
+def create_token(username: str):
+    """Create JWT token"""
     expire = datetime.utcnow() + timedelta(hours=24)
     return jwt.encode({"sub": username, "exp": expire}, SECRET_KEY, algorithm="HS256")
+
+def get_password_strength(password: str):
+    """Check password strength"""
+    if len(password) <= 6 or password.isdigit():
+        return "weak"
+    elif len(password) > 12:
+        return "strong"
+    return "medium"
 
 # Routes
 @app.get("/")
 def root():
-    return {"message": "Password Auth Research API"}
+    """Root endpoint"""
+    return {
+        "message": "Password Auth Research API",
+        "group_seed": GROUP_SEED,
+        "docs": "/docs"
+    }
 
-@app.post("/api/login", response_model=LoginResponse)
-async def login(request: LoginRequest, http_request: Request, db: Session = Depends(get_db)):
-    start_time = time.time()
+@app.post("/api/login")
+async def login(request: LoginRequest, http_request: Request):
+    """Login endpoint"""
+    start = time.time()
+    ip = http_request.client.host
     
-    # Get user
-    user = db.query(User).filter(User.username == request.username).first()
+    logger.info(f"Login attempt: {request.username} from {ip}")
+    
+    # Load users
+    users = load_users()
+    
+    # Find user
+    user = next((u for u in users if u["username"] == request.username), None)
     
     if not user:
-        latency = (time.time() - start_time) * 1000
-        # Log attempt
-        log = AttemptLog(username=request.username, success=False, latency_ms=latency)
-        db.add(log)
-        db.commit()
+        # Log failed attempt
+        latency = (time.time() - start) * 1000
+        attempts.append({
+            "username": request.username,
+            "success": False,
+            "latency_ms": latency,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        logger.warning(f"User not found: {request.username}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # Check if locked
-    if user.locked_until and user.locked_until > datetime.utcnow():
-        latency = (time.time() - start_time) * 1000
-        log = AttemptLog(username=request.username, success=False, latency_ms=latency)
-        db.add(log)
-        db.commit()
-        raise HTTPException(status_code=423, detail="Account is locked")
-    
-    # Verify password
-    salt, hashed = user.hashed_password.split(":")
-    is_valid = verify_password(request.password, salt, hashed)
-    
-    latency = (time.time() - start_time) * 1000
-    
-    if is_valid:
-        # Success
-        user.failed_attempts = 0
-        user.locked_until = None
-        token = create_token(user.username)
-        
-        log = AttemptLog(username=request.username, success=True, latency_ms=latency)
-        db.add(log)
-        db.commit()
-        
-        return LoginResponse(
-            success=True,
-            message="Login successful",
-            token=token,
-            user={
-                "id": user.id,
-                "username": user.username,
-                "password_strength": user.password_strength
-            }
-        )
-    else:
-        # Failed
-        user.failed_attempts += 1
-        if user.failed_attempts >= 5:
-            user.locked_until = datetime.utcnow() + timedelta(minutes=15)
-        
-        log = AttemptLog(username=request.username, success=False, latency_ms=latency)
-        db.add(log)
-        db.commit()
-        
+    # Check password
+    if user["password"] != request.password:
+        latency = (time.time() - start) * 1000
+        attempts.append({
+            "username": request.username,
+            "success": False,
+            "latency_ms": latency,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        logger.warning(f"Invalid password for: {request.username}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Success!
+    latency = (time.time() - start) * 1000
+    attempts.append({
+        "username": request.username,
+        "success": True,
+        "latency_ms": latency,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+    
+    logger.info(f"Login successful: {request.username} ({latency:.2f}ms)")
+    
+    return {
+        "success": True,
+        "message": "Login successful",
+        "token": create_token(user["username"]),
+        "user": {
+            "username": user["username"],
+            "password_strength": get_password_strength(user["password"])
+        }
+    }
 
 @app.get("/api/stats")
-async def get_stats(db: Session = Depends(get_db)):
-    total = db.query(AttemptLog).count()
-    successful = db.query(AttemptLog).filter(AttemptLog.success == True).count()
+def get_stats():
+    """Get login statistics"""
+    total = len(attempts)
+    successful = sum(1 for a in attempts if a["success"])
     
     return {
         "total_attempts": total,
         "successful": successful,
         "failed": total - successful,
         "success_rate": round((successful / total * 100), 2) if total > 0 else 0
+    }
+
+@app.get("/health")
+def health():
+    """Health check"""
+    return {
+        "status": "healthy",
+        "total_attempts": len(attempts)
     }

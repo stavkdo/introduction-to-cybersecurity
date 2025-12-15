@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { login } from '../api';
+import { TEXTS, STORAGE_KEYS } from '../constants/constants';
+import '../styles/LoginForm.css';
 
 function LoginForm({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -15,8 +17,8 @@ function LoginForm({ onLoginSuccess }) {
     const result = await login(username, password);
 
     if (result.success) {
-      localStorage.setItem('token', result.data.token);
-      localStorage.setItem('user', JSON.stringify(result.data.user));
+      localStorage.setItem(STORAGE_KEYS.TOKEN, result.data.token);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(result.data.user));
       onLoginSuccess(result.data.user);
     } else {
       setError(result.error);
@@ -25,56 +27,15 @@ function LoginForm({ onLoginSuccess }) {
     setLoading(false);
   };
 
-  const styles = {
-    card: {
-      backgroundColor: 'white',
-      padding: '40px',
-      borderRadius: '10px',
-      boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-      maxWidth: '400px',
-      margin: '50px auto'
-    },
-    input: {
-      width: '100%',
-      padding: '12px',
-      margin: '10px 0',
-      border: '1px solid #ddd',
-      borderRadius: '5px',
-      fontSize: '14px',
-      boxSizing: 'border-box'
-    },
-    button: {
-      width: '100%',
-      padding: '12px',
-      backgroundColor: '#3498db',
-      color: 'white',
-      border: 'none',
-      borderRadius: '5px',
-      cursor: loading ? 'not-allowed' : 'pointer',
-      fontSize: '16px',
-      fontWeight: 'bold',
-      marginTop: '10px',
-      opacity: loading ? 0.6 : 1
-    },
-    error: {
-      color: '#e74c3c',
-      padding: '12px',
-      backgroundColor: '#fadbd8',
-      borderRadius: '5px',
-      marginTop: '15px',
-      fontSize: '14px'
-    }
-  };
-
   return (
-    <div style={styles.card}>
-      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Login</h2>
+    <div className="login-card">
+      <h2 className="login-title">{TEXTS.LOGIN_TITLE}</h2>
       
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="login-form">
         <input
-          style={styles.input}
+          className="login-input"
           type="text"
-          placeholder="Username"
+          placeholder={TEXTS.LOGIN_USERNAME_PLACEHOLDER}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           disabled={loading}
@@ -82,21 +43,21 @@ function LoginForm({ onLoginSuccess }) {
         />
         
         <input
-          style={styles.input}
+          className="login-input"
           type="password"
-          placeholder="Password"
+          placeholder={TEXTS.LOGIN_PASSWORD_PLACEHOLDER}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={loading}
           required
         />
         
-        <button style={styles.button} type="submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+        <button className="login-button" type="submit" disabled={loading}>
+          {loading ? TEXTS.LOGIN_LOADING : TEXTS.LOGIN_BUTTON}
         </button>
       </form>
       
-      {error && <div style={styles.error}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
     </div>
   );
 }

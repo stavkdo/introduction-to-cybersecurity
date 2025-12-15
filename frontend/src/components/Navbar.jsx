@@ -1,55 +1,35 @@
-function Navbar({ user, onLogout, onNavigate }) {
-  const styles = {
-    navbar: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '20px 40px',
-      backgroundColor: '#2c3e50',
-      color: 'white',
-      marginBottom: '30px',
-      boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-    },
-    title: {
-      margin: 0,
-      fontSize: '24px',
-      cursor: 'pointer'
-    },
-    button: {
-      padding: '10px 20px',
-      backgroundColor: '#3498db',
-      color: 'white',
-      border: 'none',
-      borderRadius: '5px',
-      cursor: 'pointer',
-      fontSize: '14px',
-      marginLeft: '10px'
-    },
-    welcomeText: {
-      marginRight: '20px'
-    }
-  };
+import '../styles/Navbar.css';
+import { TEXT, ROUTES } from '../constants';
 
+function Navbar({ user, onLogout, onNavigate }) {
   return (
-    <div style={styles.navbar}>
-      <h2 style={styles.title} onClick={() => onNavigate('home')}>
-        Password Auth Research
+    <div className="navbar">
+      <h2 className="navbar-title" onClick={() => onNavigate(ROUTES.HOME)}>
+        {TEXT.PROJECT_TITLE}
       </h2>
       
-      <div>
+      <div className="navbar-actions">
         {user ? (
           <>
-            <span style={styles.welcomeText}>Welcome, {user.username}</span>
-            <button style={styles.button} onClick={() => onNavigate('dashboard')}>
-              Dashboard
+            <span className="navbar-welcome">
+              {TEXT.WELCOME}, {user.username}
+            </span>
+            <button 
+              className="navbar-button" 
+              onClick={() => onNavigate(ROUTES.DASHBOARD)}
+            >
+              {TEXT.NAV_DASHBOARD}
             </button>
-            <button style={styles.button} onClick={onLogout}>
-              Logout
+            <button className="navbar-button" onClick={onLogout}>
+              {TEXT.LOGOUT}
             </button>
           </>
         ) : (
-          <button style={styles.button} onClick={() => onNavigate('login')}>
-            Login
+          <button 
+            className="navbar-button" 
+            onClick={() => onNavigate(ROUTES.LOGIN)}
+          >
+            {TEXT.LOGIN}
           </button>
         )}
       </div>

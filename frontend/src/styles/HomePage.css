@@ -1,0 +1,57 @@
+.home-container {
+  max-width: 600px;
+  margin: 50px auto;
+  text-align: center;
+}
+
+.home-card {
+  background-color: var(--color-white);
+  padding: var(--spacing-2xl);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.home-title {
+  font-size: 32px;
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-primary);
+}
+
+.home-subtitle {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xl);
+  font-size: 16px;
+}
+
+.home-description {
+  line-height: 1.6;
+  color: var(--color-info);
+  margin-bottom: var(--spacing-xl);
+}
+
+.home-description p {
+  margin-bottom: var(--spacing-md);
+}
+
+.home-group-seed {
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+
+.home-button {
+  padding: var(--spacing-md) var(--spacing-2xl);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all var(--transition-normal);
+}
+
+.home-button:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
