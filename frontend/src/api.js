@@ -14,13 +14,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Generic error handler (DRY)
+// Generic error handler 
 const handleApiError = (error, defaultMessage) => ({
   success: false,
   error: error.response?.data?.detail || defaultMessage
 });
 
-// Generic success handler (DRY)
+// Generic success handler
 const handleApiSuccess = (data) => ({
   success: true,
   data
