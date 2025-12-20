@@ -7,6 +7,13 @@ from datetime import datetime, timedelta
 import json
 import time
 import logging
+import uvicorn
+import os
+from pathlib import Path
+
+current_file_path = Path(__file__).resolve()
+project_root = current_file_path.parent.parent.parent
+
 
 # Setup logging (simple!)
 logging.basicConfig(
@@ -29,7 +36,7 @@ app.add_middleware(
 
 # Config (simple!)
 SECRET_KEY = "your-secret-key"
-GROUP_SEED = 211245440
+GROUP_SEED = 211245440 ^ 322356551
 
 # Storage
 attempts = []
@@ -42,13 +49,16 @@ class LoginRequest(BaseModel):
 # Helpers
 def load_users():
     """Load users from JSON file"""
+    users_file_path = project_root/'data'/'users.json'
+
     try:
-        with open('users.json', 'r') as f:
-            users = json.load(f)
+        with open(users_file_path, 'r') as file:
+            users = json.load(file)
         logger.info(f"Loaded {len(users)} users")
         return users
     except FileNotFoundError:
         logger.error("users.json not found!")
+        logger.error(f"Files actually in this folder: {os.listdir(project_root)}")
         raise HTTPException(status_code=503, detail="Service unavailable")
 
 def create_token(username: str):
@@ -78,7 +88,7 @@ def root():
 async def login(request: LoginRequest, http_request: Request):
     """Login endpoint"""
     start = time.time()
-    ip = http_request.client.host
+    ip = 'http://127.0.0.1:5000' #http_request.client.host
     
     logger.info(f"Login attempt: {request.username} from {ip}")
     
@@ -153,3 +163,6 @@ def health():
         "status": "healthy",
         "total_attempts": len(attempts)
     }
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)

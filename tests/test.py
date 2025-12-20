@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from flask import Flask, request, render_template, redirect, url_for, flash
+from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
 
 GROUP_SEED = 322356551 ^ 111111111
 HASHING_MODE = "None"
@@ -11,7 +11,7 @@ latency_ms = 0
 
 app = Flask(__name__)
 
-USER_DATA_FILE = 'users.json'
+USER_DATA_FILE = 'data/users.json'
 LOG_FILE = 'attempts.log'
 
 
@@ -50,22 +50,33 @@ def log_login_attempt(username, status):
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('login.html')
+    return 'yayyy'
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username')
-    password = request.form.get('password')
-    
+    # Accept both JSON (from scripts) and form data (from HTML form)
+    data = request.get_json(silent=True)
+    if data is None:
+        data = request.form
+
+    username = data.get('username')
+    password = data.get('password')
+
     if not username or not password:
         log_login_attempt('N/A (Missing fields)', 'FAILED')
+        if request.is_json:
+            return jsonify({'error': 'Authentication failed, missing data'}), 400
         return render_template('login.html', error_message="Authentication failed, missing data")
 
     if authenticate_user(username, password):
         log_login_attempt(username, 'SUCCESS')
+        if request.is_json:
+            return jsonify({'result': 'Authentication Successful!'}), 200
         return render_template('login.html', success_message="Authentication Successful!")
     else:
         log_login_attempt(username, 'FAILURE')
+        if request.is_json:
+            return jsonify({'error': 'Authentication failed!'}), 401
         return render_template('login.html', error_message="Authentication failed!")
 
 if __name__ == '__main__':

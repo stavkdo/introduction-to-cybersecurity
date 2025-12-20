@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { login } from '../api';
-import { TEXTS, STORAGE_KEYS } from '../constants/constants';
+import { TEXT, STORAGE_KEYS } from '../constants.js';
 import '../styles/LoginForm.css';
 
 function LoginForm({ onLoginSuccess }) {
@@ -29,13 +29,13 @@ function LoginForm({ onLoginSuccess }) {
 
   return (
     <div className="login-card">
-      <h2 className="login-title">{TEXTS.LOGIN_TITLE}</h2>
+      <h2 className="login-title">{TEXT.LOGIN_TITLE}</h2>
       
       <form onSubmit={handleSubmit} className="login-form">
         <input
           className="login-input"
           type="text"
-          placeholder={TEXTS.LOGIN_USERNAME_PLACEHOLDER}
+          placeholder={TEXT.LOGIN_USERNAME_PLACEHOLDER}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           disabled={loading}
@@ -45,7 +45,7 @@ function LoginForm({ onLoginSuccess }) {
         <input
           className="login-input"
           type="password"
-          placeholder={TEXTS.LOGIN_PASSWORD_PLACEHOLDER}
+          placeholder={TEXT.LOGIN_PASSWORD_PLACEHOLDER}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={loading}
@@ -53,7 +53,7 @@ function LoginForm({ onLoginSuccess }) {
         />
         
         <button className="login-button" type="submit" disabled={loading}>
-          {loading ? TEXTS.LOGIN_LOADING : TEXTS.LOGIN_BUTTON}
+          {loading ? TEXT.LOGIN_LOADING : TEXT.LOGIN_BUTTON}
         </button>
       </form>
       
