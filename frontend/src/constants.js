@@ -25,7 +25,7 @@ export const STORAGE_KEYS = {
 };
 
 // ============================================
-// TEXT CONTENT (Reusable)
+// TEXT CONTENT
 // ============================================
 export const TEXT = {
   // Common
@@ -47,9 +47,11 @@ export const TEXT = {
   HOME_CTA: 'Go to Login',
   
   // Login
-  LOGIN_USERNAME: 'Username',
-  LOGIN_PASSWORD: 'Password',
-  LOGIN_SUBMITTING: 'Logging in...',
+  LOGIN_TITLE: 'Login',  
+  LOGIN_USERNAME_PLACEHOLDER: 'Username',  
+  LOGIN_PASSWORD_PLACEHOLDER: 'Password',  
+  LOGIN_LOADING: 'Logging in...',  
+  LOGIN_BUTTON: 'Login',  
   
   // Dashboard
   DASHBOARD_LOGGED_IN: 'Logged in as',
@@ -60,21 +62,4 @@ export const TEXT = {
   STAT_SUCCESS: 'Successful',
   STAT_FAILED: 'Failed',
   STAT_RATE: 'Success Rate',
-};
-
-// ============================================
-// COLORS (Single source of truth)
-// ============================================
-export const COLORS = {
-  PRIMARY: '#3498db',
-  PRIMARY_DARK: '#2980b9',
-  SUCCESS: '#27ae60',
-  ERROR: '#e74c3c',
-  WARNING: '#f39c12',
-  INFO: '#34495e',
-  BACKGROUND: '#ecf0f1',
-  TEXT_PRIMARY: '#2c3e50',
-  TEXT_SECONDARY: '#7f8c8d',
-  BORDER: '#ddd',
-  WHITE: '#ffffff',
 };

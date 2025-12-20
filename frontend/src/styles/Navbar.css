@@ -45,3 +45,11 @@
 .navbar-button:hover {
   background-color: var(--color-primary-dark);
 }
+
+.navbar-button-logout {
+  background-color: #e74c3c;
+}
+
+.navbar-button-logout:hover {
+  background-color: #c0392b;
+}

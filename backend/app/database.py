@@ -37,23 +37,16 @@ def get_db() -> Generator[Session, None, None]:
 # ============================================
 
 class User(Base):
-    """User table"""
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(100), unique=True, index=True, nullable=False)
     password = Column(String(255), nullable=False)  # Plain text for research
     password_strength = Column(String(20))
-    
-    # Security fields
     failed_attempts = Column(Integer, default=0)
-    locked_until = Column(DateTime, nullable=True)
-    
-    # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class AttemptLog(Base):
-    """Login attempt logs table"""
     __tablename__ = "attempt_logs"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -62,3 +55,8 @@ class AttemptLog(Base):
     success = Column(Boolean, nullable=False)
     latency_ms = Column(Float, nullable=False)
     ip_address = Column(String(45))
+
+
+# Print on import
+print(f"✅ Database module loaded")
+print(f"📊 Database: {DATABASE_URL[:50] if DATABASE_URL else 'Not configured'}...")

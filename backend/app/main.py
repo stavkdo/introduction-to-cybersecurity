@@ -1,31 +1,26 @@
-
-from fastapi import FastAPI, HTTPException, Request
+"""
+FastAPI Application - Complete with Database and Failed Attempts Tracking
+"""
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from jose import jwt
 from datetime import datetime, timedelta
-import json
 import time
-import logging
-import uvicorn
 import os
-from pathlib import Path
+from dotenv import load_dotenv
 
-current_file_path = Path(__file__).resolve()
-project_root = current_file_path.parent.parent.parent
+# Import from database.py (same folder)
+from database import get_db, User, AttemptLog
 
+# Load environment variables
+load_dotenv()
 
-# Setup logging (simple!)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# FastAPI app
+# Create FastAPI app
 app = FastAPI(title="Password Auth Research")
 
-# CORS
+# CORS - Allow React to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -34,135 +29,188 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Config (simple!)
-SECRET_KEY = "your-secret-key"
-GROUP_SEED = 211245440 ^ 322356551
+# Configuration from .env
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+GROUP_SEED = int(os.getenv("GROUP_SEED", "211245440"))
 
-# Storage
-attempts = []
+# ============================================
+# REQUEST/RESPONSE MODELS
+# ============================================
 
-# Schemas
 class LoginRequest(BaseModel):
     username: str
     password: str
 
-# Helpers
-def load_users():
-    """Load users from JSON file"""
-    users_file_path = project_root/'data'/'users.json'
 
-    try:
-        with open(users_file_path, 'r') as file:
-            users = json.load(file)
-        logger.info(f"Loaded {len(users)} users")
-        return users
-    except FileNotFoundError:
-        logger.error("users.json not found!")
-        logger.error(f"Files actually in this folder: {os.listdir(project_root)}")
-        raise HTTPException(status_code=503, detail="Service unavailable")
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
 
-def create_token(username: str):
+def create_token(username: str) -> str:
     """Create JWT token"""
     expire = datetime.utcnow() + timedelta(hours=24)
     return jwt.encode({"sub": username, "exp": expire}, SECRET_KEY, algorithm="HS256")
 
-def get_password_strength(password: str):
-    """Check password strength"""
-    if len(password) <= 6 or password.isdigit():
-        return "weak"
-    elif len(password) > 12:
-        return "strong"
-    return "medium"
 
-# Routes
+# ============================================
+# API ENDPOINTS
+# ============================================
+
 @app.get("/")
 def root():
     """Root endpoint"""
     return {
         "message": "Password Auth Research API",
         "group_seed": GROUP_SEED,
-        "docs": "/docs"
+        "docs": "/docs",
+        "status": "running"
     }
 
+
 @app.post("/api/login")
-async def login(request: LoginRequest, http_request: Request):
-    """Login endpoint"""
-    start = time.time()
-    ip = 'http://127.0.0.1:5000' #http_request.client.host
+def login(request: LoginRequest, http_request: Request, db: Session = Depends(get_db)):
+    """
+    Login endpoint with failed attempts tracking
     
-    logger.info(f"Login attempt: {request.username} from {ip}")
+    Logic:
+    1. Find user in database
+    2. If wrong password -> increment failed_attempts
+    3. If correct password -> reset failed_attempts to 0
+    4. Log all attempts
+    """
+    start_time = time.time()
+    ip = http_request.client.host if http_request.client else "unknown"
     
-    # Load users
-    users = load_users()
+    print(f"login Attempt: {request.username} from {ip}")
     
-    # Find user
-    user = next((u for u in users if u["username"] == request.username), None)
+    # Find user in database
+    user = db.query(User).filter(User.username == request.username).first()
     
     if not user:
+        # User doesn't exist
+        latency = (time.time() - start_time) * 1000
+        
         # Log failed attempt
-        latency = (time.time() - start) * 1000
-        attempts.append({
-            "username": request.username,
-            "success": False,
-            "latency_ms": latency,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-        logger.warning(f"User not found: {request.username}")
+        attempt = AttemptLog(
+            username=request.username,
+            success=False,
+            latency_ms=latency,
+            ip_address=ip
+        )
+        db.add(attempt)
+        db.commit()
+        
+        print(f"User not found: {request.username}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Check password
-    if user["password"] != request.password:
-        latency = (time.time() - start) * 1000
-        attempts.append({
-            "username": request.username,
-            "success": False,
-            "latency_ms": latency,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-        logger.warning(f"Invalid password for: {request.username}")
+    if user.password != request.password:
+        # WRONG PASSWORD
+        latency = (time.time() - start_time) * 1000
+        
+        # INCREMENT failed_attempts
+        user.failed_attempts += 1
+        db.commit()
+        
+        print(f"Wrong password for {request.username} (failed attempts: {user.failed_attempts})")
+        
+        # Log failed attempt
+        attempt = AttemptLog(
+            username=request.username,
+            success=False,
+            latency_ms=latency,
+            ip_address=ip
+        )
+        db.add(attempt)
+        db.commit()
+        
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # Success!
-    latency = (time.time() - start) * 1000
-    attempts.append({
-        "username": request.username,
-        "success": True,
-        "latency_ms": latency,
-        "timestamp": datetime.utcnow().isoformat()
-    })
+    # SUCCESS - Password is correct
+    latency = (time.time() - start_time) * 1000
     
-    logger.info(f"Login successful: {request.username} ({latency:.2f}ms)")
+    # RESET failed_attempts to 0
+    user.failed_attempts = 0
+    db.commit()
+
+    print(f"Login successful: {request.username} ({latency:.2f}ms) - Reset failed attempts to 0")
+
+    # Log successful attempt
+    attempt = AttemptLog(
+        username=request.username,
+        success=True,
+        latency_ms=latency,
+        ip_address=ip
+    )
+    db.add(attempt)
+    db.commit()
+    
+    # Create token
+    token = create_token(user.username)
     
     return {
         "success": True,
         "message": "Login successful",
-        "token": create_token(user["username"]),
+        "token": token,
         "user": {
-            "username": user["username"],
-            "password_strength": get_password_strength(user["password"])
+            "username": user.username,
+            "password_strength": user.password_strength
         }
     }
 
+
 @app.get("/api/stats")
-def get_stats():
-    """Get login statistics"""
-    total = len(attempts)
-    successful = sum(1 for a in attempts if a["success"])
+def get_stats(db: Session = Depends(get_db)):
+    """Get login statistics from database"""
+    total = db.query(AttemptLog).count()
+    successful = db.query(AttemptLog).filter(AttemptLog.success == True).count()
+    failed = total - successful
+    success_rate = round((successful / total * 100), 2) if total > 0 else 0
     
     return {
         "total_attempts": total,
         "successful": successful,
-        "failed": total - successful,
-        "success_rate": round((successful / total * 100), 2) if total > 0 else 0
+        "failed": failed,
+        "success_rate": success_rate
     }
+
+
+@app.get("/api/users")
+def get_users(db: Session = Depends(get_db)):
+    """
+    Get all users with their failed attempts count
+    (For debugging/testing - shows failed_attempts)
+    """
+    users = db.query(User).all()
+    
+    return {
+        "total": len(users),
+        "users": [
+            {
+                "username": user.username,
+                "password_strength": user.password_strength,
+                "failed_attempts": user.failed_attempts
+            }
+            for user in users
+        ]
+    }
+
 
 @app.get("/health")
-def health():
+def health(db: Session = Depends(get_db)):
     """Health check"""
-    return {
-        "status": "healthy",
-        "total_attempts": len(attempts)
-    }
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    try:
+        # Test database connection
+        db.execute("SELECT 1")
+        user_count = db.query(User).count()
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "users": user_count
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
