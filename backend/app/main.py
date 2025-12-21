@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 
 # Import from database.py (same folder)
-from database import get_db, User, AttemptLog
+from app.database import get_db, User, AttemptLog
 
 # Load environment variables
 load_dotenv()
@@ -31,7 +31,7 @@ app.add_middleware(
 
 # Configuration from .env
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-GROUP_SEED = int(os.getenv("GROUP_SEED", "211245440"))
+GROUP_SEED = os.getenv("GROUP_SEED", "1215067c7")
 
 # ============================================
 # REQUEST/RESPONSE MODELS

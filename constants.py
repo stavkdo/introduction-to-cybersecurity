@@ -6,7 +6,7 @@
 PROJECT_NAME = "Security Project"
 COURSE_CODE = "20940"
 COURSE_NAME = "Security in Computing Systems"
-GROUP_SEED = 211245440  # Update with your actual XOR result
+GROUP_SEED = "1215067c7"  # Update with your actual XOR result
 
 # ============================================
 # PASSWORD CATEGORIES

@@ -28,36 +28,23 @@ export const STORAGE_KEYS = {
 // TEXT CONTENT
 // ============================================
 export const TEXT = {
-  // Common
   WELCOME: 'Welcome',
   LOGIN: 'Login',
   LOGOUT: 'Logout',
   LOADING: 'Loading...',
-  
-  // Project
   PROJECT_TITLE: PROJECT.NAME,
   PROJECT_SUBTITLE: `Security Course ${PROJECT.COURSE_CODE}`,
-  
-  // Navigation
   NAV_DASHBOARD: 'Dashboard',
-  
-  // Home Page
   HOME_DESCRIPTION: 'This is a research project analyzing password authentication mechanisms and their resilience against common attack vectors.',
   HOME_GROUP_SEED_LABEL: 'Group Seed',
   HOME_CTA: 'Go to Login',
-  
-  // Login
   LOGIN_TITLE: 'Login',  
   LOGIN_USERNAME_PLACEHOLDER: 'Username',  
   LOGIN_PASSWORD_PLACEHOLDER: 'Password',  
   LOGIN_LOADING: 'Logging in...',  
   LOGIN_BUTTON: 'Login',  
-  
-  // Dashboard
   DASHBOARD_LOGGED_IN: 'Logged in as',
   DASHBOARD_PASSWORD_STRENGTH: 'Password Strength',
-  
-  // Stats
   STAT_TOTAL: 'Total Attempts',
   STAT_SUCCESS: 'Successful',
   STAT_FAILED: 'Failed',

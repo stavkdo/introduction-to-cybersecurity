@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
 
-GROUP_SEED = 322356551 ^ 111111111
+GROUP_SEED = "1215067c7"
 HASHING_MODE = "None"
 PROTACTION_FLAGS = "None"
 latency_ms = 0

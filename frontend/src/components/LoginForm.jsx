@@ -81,7 +81,7 @@ function LoginForm({ onLoginSuccess }) {
           type="submit" 
           disabled={loading}
         >
-          {loading ? TEXT.LOGIN_LOADING : TEXT.LOGIN_BTN}
+          {loading ? TEXT.LOGIN_LOADING : TEXT.LOGIN}
         </button>
       </form>
       
