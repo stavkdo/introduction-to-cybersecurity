@@ -3,24 +3,35 @@ import { TEXT, ROUTES } from '../constants';
 
 function Navbar({ user, onLogout, onNavigate }) {
   return (
-    <div className="navbar">
-      <h2 className="navbar-title" onClick={() => onNavigate(ROUTES.HOME)}>
+    <nav className="navbar">
+      {/* Project Title - Click to go home */}
+      <h2 
+        className="navbar-title" 
+        onClick={() => onNavigate(ROUTES.HOME)}
+        style={{ cursor: 'pointer' }}
+      >
         {TEXT.PROJECT_TITLE}
       </h2>
       
+      {/* Navigation Buttons */}
       <div className="navbar-actions">
         {user ? (
           <>
             <span className="navbar-welcome">
-              {TEXT.WELCOME}, {user.username}
+              {TEXT.WELCOME}, <strong>{user.username}</strong>
             </span>
+            
             <button 
               className="navbar-button" 
               onClick={() => onNavigate(ROUTES.DASHBOARD)}
             >
               {TEXT.NAV_DASHBOARD}
             </button>
-            <button className="navbar-button" onClick={onLogout}>
+            
+            <button 
+              className="navbar-button navbar-button-logout" 
+              onClick={onLogout}  
+            >
               {TEXT.LOGOUT}
             </button>
           </>
@@ -33,7 +44,7 @@ function Navbar({ user, onLogout, onNavigate }) {
           </button>
         )}
       </div>
-    </div>
+    </nav>
   );
 }
 

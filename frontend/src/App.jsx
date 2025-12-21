@@ -3,68 +3,77 @@ import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import { ROUTES, STORAGE_KEYS } from './constants';
+import { ROUTES } from './constants';
+import { getCurrentUser, clearSession, isAuthenticated } from './utils/auth'; 
 
 function App() {
   const [currentPage, setCurrentPage] = useState(ROUTES.HOME);
   const [user, setUser] = useState(null);
 
-  // Load user from storage on mount
+  /**
+   * check for existing session 
+   */
   useEffect(() => {
-    const savedUser = getStoredUser();
-    if (savedUser) {
+    if (isAuthenticated()) {
+      const savedUser = getCurrentUser();
       setUser(savedUser);
       setCurrentPage(ROUTES.DASHBOARD);
+      console.log('[APP] Restored session:', savedUser.username);
     }
   }, []);
 
-  // Helper: Get user from localStorage (DRY)
-  const getStoredUser = () => {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    const userJson = localStorage.getItem(STORAGE_KEYS.USER);
-    return token && userJson ? JSON.parse(userJson) : null;
-  };
-
-  // Helper: Clear storage (DRY)
-  const clearStorage = () => {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.USER);
-  };
-
-  // Handlers
   const handleLoginSuccess = (userData) => {
     setUser(userData);
     setCurrentPage(ROUTES.DASHBOARD);
+    console.log('[APP] User logged in:', userData.username);
   };
 
   const handleLogout = () => {
-    clearStorage();
+    clearSession();  
     setUser(null);
     setCurrentPage(ROUTES.HOME);
+    console.log('[APP] User logged out');
   };
 
   const handleNavigate = (page) => {
     setCurrentPage(page);
+    console.log('[APP] Navigated to:', page);
   };
 
-  // Render current page (DRY)
+  //  routes rendering
   const renderPage = () => {
-    const pages = {
-      [ROUTES.HOME]: <HomePage onNavigate={handleNavigate} />,
-      [ROUTES.LOGIN]: <LoginPage onLoginSuccess={handleLoginSuccess} />,
-      [ROUTES.DASHBOARD]: user && <DashboardPage user={user} />,
-    };
-    return pages[currentPage];
+    switch (currentPage) {
+      case ROUTES.HOME:
+        return <HomePage onNavigate={handleNavigate} />;
+      
+      case ROUTES.LOGIN:
+        return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+      
+      case ROUTES.DASHBOARD:
+        return user ? (
+          <DashboardPage user={user} />
+        ) : (
+          <LoginPage onLoginSuccess={handleLoginSuccess} />
+        );
+      
+      default:
+        return <HomePage onNavigate={handleNavigate} />;
+    }
   };
 
   return (
-    <div style={{ backgroundColor: '#ecf0f1', minHeight: '100vh' }}>
+    <div className="app">
+      {/* Navigation Bar */}
       <Navbar 
         user={user} 
-        onLogout={handleLogout}
+        onLogout={handleLogout}  
         onNavigate={handleNavigate}
       />
-      {renderPage()}
+      
+      {/* Current Page */}
+      <main className="app-content">
+        {renderPage()}
+      </main>
     </div>
   );
 }
