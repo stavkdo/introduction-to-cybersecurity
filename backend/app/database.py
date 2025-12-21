@@ -47,19 +47,23 @@ class User(Base):
     password = Column(String(255), nullable=False)  # Plain text for research
     password_strength = Column(String(20))
     failed_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class AttemptLog(Base):
     __tablename__ = "attempt_logs"
     
     id = Column(Integer, primary_key=True, index=True)
+    group_seed = Column(Integer, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     username = Column(String(100), nullable=False)
-    success = Column(Boolean, nullable=False)
+    hash_mode = Column(String(20), nullable=False)
+    protection_flags = Column(Integer, nullable=False)
+    result = Column(Boolean, nullable=False)
     latency_ms = Column(Float, nullable=False)
     ip_address = Column(String(45))
 
 
 # Print on import
-print(f"✅ Database module loaded")
-print(f"📊 Database: {DATABASE_URL[:50] if DATABASE_URL else 'Not configured'}...")
+print(f"Database module loaded")
+print(f"Database: {DATABASE_URL[:50] if DATABASE_URL else 'Not configured'}...")
