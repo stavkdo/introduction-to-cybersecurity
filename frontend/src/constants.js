@@ -5,7 +5,7 @@ export const PROJECT = {
   NAME: 'Password Authentication Research',
   COURSE_CODE: '20940',
   COURSE_NAME: 'Introduction to Cybersecurity',
-  GROUP_SEED: 211245440,
+  GROUP_SEED: '1215067c7',
 };
 
 // ============================================

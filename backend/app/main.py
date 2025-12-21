@@ -10,11 +10,9 @@ from datetime import datetime, timedelta
 import time
 import os
 from dotenv import load_dotenv
-
-# Import from database.py (same folder)
 from app.database import get_db, User, AttemptLog
 
-# Load environment variables
+# Load environment
 load_dotenv()
 
 # Create FastAPI app
@@ -33,28 +31,19 @@ app.add_middleware(
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 GROUP_SEED = os.getenv("GROUP_SEED", "1215067c7")
 
-# ============================================
-# REQUEST/RESPONSE MODELS
-# ============================================
 
+# Login Request vars
 class LoginRequest(BaseModel):
     username: str
     password: str
 
 
-# ============================================
-# HELPER FUNCTIONS
-# ============================================
-
+# create JWT token
 def create_token(username: str) -> str:
-    """Create JWT token"""
     expire = datetime.utcnow() + timedelta(hours=24)
     return jwt.encode({"sub": username, "exp": expire}, SECRET_KEY, algorithm="HS256")
 
 
-# ============================================
-# API ENDPOINTS
-# ============================================
 
 @app.get("/")
 def root():
@@ -87,15 +76,14 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
     user = db.query(User).filter(User.username == request.username).first()
     
     if not user:
-        # User doesn't exist
         latency = (time.time() - start_time) * 1000
         
-        # Log failed attempt
         attempt = AttemptLog(
             username=request.username,
             success=False,
             latency_ms=latency,
             ip_address=ip
+
         )
         db.add(attempt)
         db.commit()
@@ -103,18 +91,14 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         print(f"User not found: {request.username}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # Check password
+    # Check password - log if failed and increment failed_attempts
     if user.password != request.password:
-        # WRONG PASSWORD
         latency = (time.time() - start_time) * 1000
-        
-        # INCREMENT failed_attempts
         user.failed_attempts += 1
         db.commit()
         
         print(f"Wrong password for {request.username} (failed attempts: {user.failed_attempts})")
         
-        # Log failed attempt
         attempt = AttemptLog(
             username=request.username,
             success=False,
@@ -126,10 +110,8 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # SUCCESS - Password is correct
+    # SUCCESS - Password is correct and reset failed_attempts
     latency = (time.time() - start_time) * 1000
-    
-    # RESET failed_attempts to 0
     user.failed_attempts = 0
     db.commit()
 
@@ -140,7 +122,7 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         username=request.username,
         success=True,
         latency_ms=latency,
-        ip_address=ip
+        ip_address=ip,
     )
     db.add(attempt)
     db.commit()
