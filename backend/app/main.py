@@ -31,7 +31,7 @@ app.add_middleware(
 
 # Configuration from .env
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-GROUP_SEED = os.getenv("GROUP_SEED", "1215067c7")
+GROUP_SEED = int(os.getenv("GROUP_SEED", "211245440"))
 
 # ============================================
 # REQUEST/RESPONSE MODELS

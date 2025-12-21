@@ -9,7 +9,7 @@ from datetime import datetime
 # Add app folder to path
 sys.path.insert(0, str(Path(__file__).parent / 'app'))
 
-from database import SessionLocal, User
+from app.database import SessionLocal, User
 
 # All 30 users
 users_data = [

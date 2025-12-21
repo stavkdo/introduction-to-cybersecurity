@@ -4,11 +4,12 @@ Run ONCE after setting up PostgreSQL
 """
 import sys
 from pathlib import Path
+from app.database import Base, engine
 
 # Add app folder to path
 sys.path.insert(0, str(Path(__file__).parent / 'app'))
 
-from database import Base, engine
+
 
 print("="*60)
 print("Creating database tables...")
