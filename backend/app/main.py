@@ -96,6 +96,7 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
             success=False,
             latency_ms=latency,
             ip_address=ip
+
         )
         db.add(attempt)
         db.commit()
@@ -140,7 +141,7 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         username=request.username,
         success=True,
         latency_ms=latency,
-        ip_address=ip
+        ip_address=ip,
     )
     db.add(attempt)
     db.commit()
