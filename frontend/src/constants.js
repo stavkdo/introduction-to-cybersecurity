@@ -1,6 +1,3 @@
-// ============================================
-// PROJECT INFO
-// ============================================
 export const PROJECT = {
   NAME: 'Password Authentication Research',
   COURSE_CODE: '20940',
@@ -8,9 +5,7 @@ export const PROJECT = {
   GROUP_SEED: '1215067c7',
 };
 
-// ============================================
-// API & ROUTES
-// ============================================
+
 export const API_BASE_URL = 'http://localhost:8000/api';
 
 export const ROUTES = {
@@ -20,13 +15,11 @@ export const ROUTES = {
 };
 
 export const STORAGE_KEYS = {
-  TOKEN: 'token',
-  USER: 'user',
+  TOKEN: 'auth_token',
+  USER: 'auth_user',
 };
 
-// ============================================
-// TEXT CONTENT
-// ============================================
+
 export const TEXT = {
   WELCOME: 'Welcome',
   LOGIN: 'Login',
@@ -38,11 +31,10 @@ export const TEXT = {
   HOME_DESCRIPTION: 'This is a research project analyzing password authentication mechanisms and their resilience against common attack vectors.',
   HOME_GROUP_SEED_LABEL: 'Group Seed',
   HOME_CTA: 'Go to Login',
-  LOGIN_TITLE: 'Login',  
-  LOGIN_USERNAME_PLACEHOLDER: 'Username',  
-  LOGIN_PASSWORD_PLACEHOLDER: 'Password',  
-  LOGIN_LOADING: 'Logging in...',  
-  LOGIN_BUTTON: 'Login',  
+  LOGIN_TITLE: 'Login',
+  LOGIN_USERNAME: 'Username',
+  LOGIN_PASSWORD: 'Password',
+  LOGIN_LOADING: 'Logging in...',
   DASHBOARD_LOGGED_IN: 'Logged in as',
   DASHBOARD_PASSWORD_STRENGTH: 'Password Strength',
   STAT_TOTAL: 'Total Attempts',

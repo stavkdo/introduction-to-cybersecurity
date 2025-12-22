@@ -4,7 +4,6 @@ import { TEXT, ROUTES } from '../constants';
 function Navbar({ user, onLogout, onNavigate }) {
   return (
     <nav className="navbar">
-      {/* Project Title - Click to go home */}
       <h2 
         className="navbar-title" 
         onClick={() => onNavigate(ROUTES.HOME)}
@@ -12,8 +11,7 @@ function Navbar({ user, onLogout, onNavigate }) {
       >
         {TEXT.PROJECT_TITLE}
       </h2>
-      
-      {/* Navigation Buttons */}
+     
       <div className="navbar-actions">
         {user ? (
           <>

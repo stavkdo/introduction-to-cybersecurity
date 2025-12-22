@@ -5,7 +5,6 @@ const api = axios.create({
   baseURL: API_BASE_URL
 });
 
-// Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   if (token) {
@@ -14,22 +13,55 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Generic error handler 
-const handleApiError = (error, defaultMessage) => ({
-  success: false,
-  error: error.response?.data?.detail || defaultMessage
-});
+const handleApiError = (error, defaultMessage) => {
+  let errorMessage = defaultMessage;
+  
+  if (error.response?.data?.detail) {
+    const detail = error.response.data.detail;
+    
+    if (typeof detail === 'string') {
+      errorMessage = detail;
+    } else if (detail.message) {
+      errorMessage = detail.message;
+    }
+  }
+  
+  return {
+    success: false,
+    error: errorMessage
+  };
+};
 
-// Generic success handler
 const handleApiSuccess = (data) => ({
   success: true,
   data
 });
 
-// API Methods
-export const login = async (username, password) => {
+export const register = async (username, password, password_strength = 'medium') => {
   try {
-    const { data } = await api.post('/login', { username, password });
+    const { data } = await api.post('/register', {
+      username,
+      password,
+      password_strength
+    });
+    return handleApiSuccess(data);
+  } catch (error) {
+    return handleApiError(error, 'Registration failed');
+  }
+};
+
+export const login = async (username, password, captcha_token = null, totp_code = null) => {
+  try {
+    const payload = { username, password };
+    if (captcha_token) payload.captcha_token = captcha_token;
+    
+    const endpoint = totp_code ? '/login_totp' : '/login';
+    
+    if (totp_code) {
+      payload.totp_code = totp_code;
+    }
+    
+    const { data } = await api.post(endpoint, payload);
     return handleApiSuccess(data);
   } catch (error) {
     return handleApiError(error, 'Login failed');
@@ -42,5 +74,14 @@ export const getStats = async () => {
     return handleApiSuccess(data);
   } catch (error) {
     return handleApiError(error, 'Failed to load stats');
+  }
+};
+
+export const getCaptchaToken = async (groupSeed) => {
+  try {
+    const { data } = await api.get(`http://localhost:8000/admin/get_captcha_token?group_seed=${groupSeed}`);
+    return handleApiSuccess(data);
+  } catch (error) {
+    return handleApiError(error, 'Failed to get CAPTCHA token');
   }
 };

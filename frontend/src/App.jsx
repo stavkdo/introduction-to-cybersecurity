@@ -10,9 +10,6 @@ function App() {
   const [currentPage, setCurrentPage] = useState(ROUTES.HOME);
   const [user, setUser] = useState(null);
 
-  /**
-   * check for existing session 
-   */
   useEffect(() => {
     if (isAuthenticated()) {
       const savedUser = getCurrentUser();
@@ -40,7 +37,6 @@ function App() {
     console.log('[APP] Navigated to:', page);
   };
 
-  //  routes rendering
   const renderPage = () => {
     switch (currentPage) {
       case ROUTES.HOME:
@@ -63,14 +59,12 @@ function App() {
 
   return (
     <div className="app">
-      {/* Navigation Bar */}
       <Navbar 
         user={user} 
         onLogout={handleLogout}  
         onNavigate={handleNavigate}
       />
       
-      {/* Current Page */}
       <main className="app-content">
         {renderPage()}
       </main>

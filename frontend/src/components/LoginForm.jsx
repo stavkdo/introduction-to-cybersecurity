@@ -1,18 +1,20 @@
-
 import { useState } from 'react';
-import { login } from '../api';
+import { login, getCaptchaToken } from '../api';
 import { saveSession } from '../utils/auth';
-import { TEXT } from '../constants';
+import { TEXT, PROJECT } from '../constants';
 import '../styles/LoginForm.css';
 
-function LoginForm({ onLoginSuccess }) {
+function LoginForm({ onLoginSuccess, onSwitchToRegister }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
 
- 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -20,28 +22,50 @@ function LoginForm({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      // Call API
-      const result = await login(username, password);
+      const result = await login(username, password, captchaToken, totpCode);
 
       if (result.success) {
-        console.log('Login Success:', result.data);
         setSuccess('Login successful! Redirecting...');
         saveSession(result.data.token, result.data.user);
         
-        // Wait for redirect to dashboard
         setTimeout(() => {
           onLoginSuccess(result.data.user);
         }, 1000);
         
       } else {
-        console.warn('Login Failed:', result.error);
-        setError(result.error);
+        const errorMsg = result.error.toLowerCase();
+        
+        if (errorMsg.includes('captcha')) {
+          setCaptchaRequired(true);
+          setError('CAPTCHA verification required');
+        } else if (errorMsg.includes('totp')) {
+          setTotpRequired(true);
+          setError('TOTP code required');
+        } else {
+          setError(result.error);
+        }
       }
 
     } catch (err) {
-      console.error('Unexpected error:', err);
-      setError('An unexpected error occurred. Please try again.');
+      setError('Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleGetCaptcha = async () => {
+    setLoading(true);
+    try {
+      const result = await getCaptchaToken(PROJECT.GROUP_SEED);
+      if (result.success) {
+        setCaptchaToken(result.data.captcha_token);
+        setSuccess('CAPTCHA token received! Now click Login.');
+        setError('');
+      } else {
+        setError('Failed to get CAPTCHA token');
+      }
+    } catch (err) {
+      setError('Failed to get CAPTCHA token');
     } finally {
       setLoading(false);
     }
@@ -52,9 +76,7 @@ function LoginForm({ onLoginSuccess }) {
       <h2 className="login-title">{TEXT.LOGIN_TITLE}</h2>
       
       <form onSubmit={handleSubmit} className="login-form">
-        {/* Username Input */}
-        <input
-          className="login-input"
+        <Input
           type="text"
           placeholder={TEXT.LOGIN_USERNAME}
           value={username}
@@ -64,9 +86,7 @@ function LoginForm({ onLoginSuccess }) {
           autoFocus
         />
         
-        {/* Password Input */}
-        <input
-          className="login-input"
+        <Input
           type="password"
           placeholder={TEXT.LOGIN_PASSWORD}
           value={password}
@@ -75,29 +95,49 @@ function LoginForm({ onLoginSuccess }) {
           required
         />
         
-        {/* Submit Button */}
-        <button 
-          className="login-button" 
-          type="submit" 
-          disabled={loading}
-        >
-          {loading ? TEXT.LOGIN_LOADING : TEXT.LOGIN}
-        </button>
+        {totpRequired && (
+          <Input
+            type="text"
+            placeholder="TOTP Code (6 digits)"
+            value={totpCode}
+            onChange={(e) => setTotpCode(e.target.value)}
+            disabled={loading}
+            required
+          />
+        )}
+        
+        <Button type="submit" loading={loading}>
+          {TEXT.LOGIN}
+        </Button>
       </form>
       
-      {/* Success Message */}
-      {success && (
-        <div className="alert alert-success" role="alert">
-          {success}
+      {captchaRequired && (
+        <div className="captcha-section">
+          <p className="captcha-text">CAPTCHA verification required</p>
+          <Button variant="warning" onClick={handleGetCaptcha} disabled={loading}>
+            Get CAPTCHA Token
+          </Button>
+          {captchaToken && (
+            <div className="captcha-token">
+              <strong>Token:</strong> {captchaToken.substring(0, 16)}...
+            </div>
+          )}
         </div>
       )}
       
-      {/* Error Message */}
-      {error && (
-        <div className="alert alert-error" role="alert">
-          {error}
-        </div>
-      )}
+      <div className="switch-auth">
+        Don't have an account?{' '}
+        <button 
+          className="link-button"
+          onClick={onSwitchToRegister}
+          disabled={loading}
+        >
+          Register here
+        </button>
+      </div>
+      
+      <Alert type="success" message={success} />
+      <Alert type="error" message={error} />
     </div>
   );
 }

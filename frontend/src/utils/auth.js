@@ -1,6 +1,4 @@
-
 import { STORAGE_KEYS } from '../constants';
-
 
 export function saveSession(token, user) {
   try {
