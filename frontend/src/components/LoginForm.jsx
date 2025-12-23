@@ -76,7 +76,8 @@ function LoginForm({ onLoginSuccess, onSwitchToRegister }) {
       <h2 className="login-title">{TEXT.LOGIN_TITLE}</h2>
       
       <form onSubmit={handleSubmit} className="login-form">
-        <Input
+        <input
+          className="form-input"
           type="text"
           placeholder={TEXT.LOGIN_USERNAME}
           value={username}
@@ -86,7 +87,8 @@ function LoginForm({ onLoginSuccess, onSwitchToRegister }) {
           autoFocus
         />
         
-        <Input
+        <input
+          className="form-input"
           type="password"
           placeholder={TEXT.LOGIN_PASSWORD}
           value={password}
@@ -96,7 +98,8 @@ function LoginForm({ onLoginSuccess, onSwitchToRegister }) {
         />
         
         {totpRequired && (
-          <Input
+          <input
+            className="form-input"
             type="text"
             placeholder="TOTP Code (6 digits)"
             value={totpCode}
@@ -106,17 +109,26 @@ function LoginForm({ onLoginSuccess, onSwitchToRegister }) {
           />
         )}
         
-        <Button type="submit" loading={loading}>
-          {TEXT.LOGIN}
-        </Button>
+        <button 
+          className="btn btn-primary" 
+          type="submit" 
+          disabled={loading}
+        >
+          {loading ? TEXT.LOGIN_LOADING : TEXT.LOGIN}
+        </button>
       </form>
       
       {captchaRequired && (
         <div className="captcha-section">
           <p className="captcha-text">CAPTCHA verification required</p>
-          <Button variant="warning" onClick={handleGetCaptcha} disabled={loading}>
+          <button 
+            className="btn btn-warning"
+            onClick={handleGetCaptcha}
+            disabled={loading}
+            type="button"
+          >
             Get CAPTCHA Token
-          </Button>
+          </button>
           {captchaToken && (
             <div className="captcha-token">
               <strong>Token:</strong> {captchaToken.substring(0, 16)}...
@@ -131,13 +143,23 @@ function LoginForm({ onLoginSuccess, onSwitchToRegister }) {
           className="link-button"
           onClick={onSwitchToRegister}
           disabled={loading}
+          type="button"
         >
           Register here
         </button>
       </div>
       
-      <Alert type="success" message={success} />
-      <Alert type="error" message={error} />
+      {success && (
+        <div className="alert alert-success">
+          {success}
+        </div>
+      )}
+      
+      {error && (
+        <div className="alert alert-error">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,69 +1,33 @@
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 80px);
+  padding: 20px;
+  background-color: #ecf0f1;
+}
+
 .login-card {
-  background-color: var(--color-white);
-  padding: var(--spacing-2xl);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  width: 100%;
   max-width: 400px;
-  margin: 50px auto;
 }
 
 .login-title {
   text-align: center;
-  margin-bottom: var(--spacing-xl);
-  color: var(--color-text-primary);
+  color: #2c3e50;
+  margin-bottom: 30px;
+  font-size: 24px;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.login-input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-}
-
-.login-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.login-button {
-  width: 100%;
-  padding: 12px;
-  background-color: var(--color-primary);
-  color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  margin-top: var(--spacing-sm);
-}
-
-.login-button:hover {
-  background-color: var(--color-primary-dark);
-}
-
-.login-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.alert-error {
-  background-color: #fadbd8;
-  color: #e74c3c;
-  border: 1px solid #f5c6cb;
-}
-
-.alert-success {
-  background-color: #d4edda;
-  color: #27ae60;
-  border: 1px solid #c3e6cb;
+  gap: 15px;
 }
 
 .captcha-section {
@@ -79,27 +43,6 @@
   margin: 0 0 10px 0;
   color: #856404;
   font-weight: 500;
-}
-
-.captcha-button {
-  padding: 10px 20px;
-  background-color: #ffc107;
-  color: #000;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.captcha-button:hover:not(:disabled) {
-  background-color: #e0a800;
-}
-
-.captcha-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .captcha-token {

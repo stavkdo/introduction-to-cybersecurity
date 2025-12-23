@@ -1,68 +1,66 @@
 .dashboard-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: var(--spacing-lg);
+  padding: 40px 20px;
 }
 
 .dashboard-title {
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-lg);
+  color: #2c3e50;
+  font-size: 32px;
+  margin-bottom: 10px;
 }
 
 .dashboard-welcome {
-  background-color: #d4edda;
-  color: #155724;
-  padding: var(--spacing-md);
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--spacing-xl);
-  border: 1px solid #c3e6cb;
+  color: #555;
+  margin-bottom: 30px;
+  font-size: 16px;
 }
 
 .dashboard-loading {
   text-align: center;
-  margin-top: 100px;
+  padding: 50px;
   font-size: 18px;
-  color: var(--color-text-secondary);
+  color: #7f8c8d;
 }
 
-/* Stats Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-lg);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .stat-card {
-  background-color: var(--color-white);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
-}
-
-.stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
 }
 
 .stat-title {
-  color: var(--color-text-secondary);
+  color: #7f8c8d;
   font-size: 14px;
-  margin-bottom: var(--spacing-sm);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
+  margin-bottom: 10px;
 }
 
 .stat-value {
-  font-size: 48px;
+  font-size: 36px;
   font-weight: bold;
-  margin: 0;
 }
 
-/* Stat Value Colors */
-.stat-value.total { color: var(--color-info); }
-.stat-value.success { color: var(--color-success); }
-.stat-value.error { color: var(--color-error); }
-.stat-value.info { color: var(--color-primary); }
+.stat-value.total {
+  color: #3498db;
+}
+
+.stat-value.success {
+  color: #27ae60;
+}
+
+.stat-value.error {
+  color: #e74c3c;
+}
+
+.stat-value.info {
+  color: #9b59b6;
+}

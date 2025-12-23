@@ -21,6 +21,7 @@ function RegisterForm({ onRegisterSuccess, onSwitchToLogin }) {
       return;
     }
 
+    // length limit for now not enforced
     // if (password.length < 6) {
     //   setError('Password must be at least 6 characters');
     //   return;
@@ -52,7 +53,8 @@ function RegisterForm({ onRegisterSuccess, onSwitchToLogin }) {
       <h2 className="register-title">Register</h2>
       
       <form onSubmit={handleSubmit} className="register-form">
-        <Input
+        <input
+          className="form-input"
           type="text"
           placeholder="Username"
           value={username}
@@ -62,7 +64,8 @@ function RegisterForm({ onRegisterSuccess, onSwitchToLogin }) {
           autoFocus
         />
         
-        <Input
+        <input
+          className="form-input"
           type="password"
           placeholder="Password"
           value={password}
@@ -71,7 +74,8 @@ function RegisterForm({ onRegisterSuccess, onSwitchToLogin }) {
           required
         />
         
-        <Input
+        <input
+          className="form-input"
           type="password"
           placeholder="Confirm Password"
           value={confirmPassword}
@@ -94,9 +98,13 @@ function RegisterForm({ onRegisterSuccess, onSwitchToLogin }) {
           </select>
         </div>
         
-        <Button type="submit" loading={loading}>
-          Register
-        </Button>
+        <button 
+          className="btn btn-primary" 
+          type="submit" 
+          disabled={loading}
+        >
+          {loading ? 'Registering...' : 'Register'}
+        </button>
       </form>
       
       <div className="switch-auth">
@@ -105,13 +113,23 @@ function RegisterForm({ onRegisterSuccess, onSwitchToLogin }) {
           className="link-button"
           onClick={onSwitchToLogin}
           disabled={loading}
+          type="button"
         >
           Login here
         </button>
       </div>
       
-      <Alert type="success" message={success} />
-      <Alert type="error" message={error} />
+      {success && (
+        <div className="alert alert-success">
+          {success}
+        </div>
+      )}
+      
+      {error && (
+        <div className="alert alert-error">
+          {error}
+        </div>
+      )}
     </div>
   );
 }
