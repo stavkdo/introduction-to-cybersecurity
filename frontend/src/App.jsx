@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import Footer from './components/Footer';
 import { ROUTES } from './constants';
 import { getCurrentUser, clearSession, isAuthenticated } from './utils/auth'; 
 
@@ -68,6 +69,7 @@ function App() {
       <main className="app-content">
         {renderPage()}
       </main>
+      <Footer />
     </div>
   );
 }

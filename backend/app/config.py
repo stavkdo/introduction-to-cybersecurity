@@ -8,14 +8,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-PROJECT_NAME = "Password Authentication Research"
-COURSE_CODE = "20940"
 GROUP_SEED = os.getenv("GROUP_SEED", "1215067c7")
 DATABASE_URL = os.getenv("DATABASE_URL")
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 PEPPER = os.getenv("PEPPER", "default-pepper")
-API_BASE_URL = "http://localhost:8000"
-FRONTEND_URL = "http://localhost:5173"
 
 
 class PasswordStrength(str, Enum):
