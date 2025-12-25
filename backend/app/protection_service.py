@@ -1,23 +1,27 @@
 """
-Protection Service that handles lockout, CAPTCHA, and TOTP logic
+Protection Service
+Handles lockout, CAPTCHA, and TOTP logic
 """
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-import pyotp
+import random
+import string
 
 from app.config import (
     PROTECTION_MODE,
     ProtectionMode,
     MAX_FAILED_ATTEMPTS,
     LOCKOUT_DURATION_MINUTES,
-    CAPTCHA_REQUIRED_AFTER,
+    MAX_CAPTCHA_FAILED_ATTEMPTS,
 )
 from app.database import User
 
-valid_captcha_tokens = set()
+
+# Captcha Format: {username: {"code": "A3X7K", "expires": datetime}}
+active_captcha_codes = {}
 
 
-
+# Check if account is locked
 def is_account_locked(user: User) -> bool:
     if PROTECTION_MODE != ProtectionMode.LOCKOUT:
         return False
@@ -29,43 +33,58 @@ def is_account_locked(user: User) -> bool:
         return True
     
     user.locked_until = None
+    user.failed_attempts = 0
+    print(f"[LOCKOUT_EXPIRED] {user.username} - failed_attempts reset to 0")
     return False
 
 
+# Check if CAPTCHA is required
 def requires_captcha(user: User) -> bool:
     if PROTECTION_MODE != ProtectionMode.CAPTCHA:
         return False
     
-    return user.failed_attempts >= CAPTCHA_REQUIRED_AFTER
+    return user.failed_attempts >= MAX_CAPTCHA_FAILED_ATTEMPTS
 
 
+# Check if TOTP is required
 def requires_totp(user: User) -> bool:
-    if PROTECTION_MODE != ProtectionMode.TOTP:
+    return PROTECTION_MODE == ProtectionMode.TOTP
+
+
+# Validate CAPTCHA code
+def is_captcha_valid(username: str, code: str) -> bool:
+    print(f"[CAPTCHA_CHECK] Validating for {username}, received code: '{code}'")
+    if not code:
         return False
     
-    return user.totp_secret is not None
-
-
-def is_captcha_valid(token: str) -> bool:
-    if token and token in valid_captcha_tokens:
-        valid_captcha_tokens.discard(token)
+    # Check if user has active CAPTCHA
+    if username not in active_captcha_codes:
+        return False
+    
+    captcha_data = active_captcha_codes[username]
+    
+    # Check expiration (5 minutes)
+    if datetime.utcnow() > captcha_data["expires"]:
+        del active_captcha_codes[username]
+        return False
+    
+    # Check code (case-insensitive)
+    if code.upper() == captcha_data["code"]:
+        del active_captcha_codes[username]  # Single use
         return True
+    
     return False
 
 
+# Verify TOTP code (simple static code)
 def verify_totp_code(user: User, code: str) -> bool:
-    if not user.totp_secret:
+    if not user.totp_secret is None:
         return False
     
-    try:
-        totp = pyotp.TOTP(user.totp_secret)
-        return totp.verify(code, valid_window=1)
-    
-    except Exception as e:
-        print(f"[ERROR] TOTP verification failed: {e}")
-        return False
+    return str(user.totp_secret).strip() == str(code).strip()
 
 
+# Apply lockout if threshold reached
 def apply_lockout(user: User, db: Session):
     if PROTECTION_MODE == ProtectionMode.LOCKOUT:
         if user.failed_attempts >= MAX_FAILED_ATTEMPTS:
@@ -73,19 +92,42 @@ def apply_lockout(user: User, db: Session):
             print(f"[LOCKOUT] {user.username} locked for {LOCKOUT_DURATION_MINUTES} min")
 
 
+# Reset on successful login
 def reset_protection_state(user: User, db: Session):
     user.failed_attempts = 0
     user.locked_until = None
+    
+    # Clear CAPTCHA if exists
+    if user.username in active_captcha_codes:
+        del active_captcha_codes[user.username]
+    
     db.commit()
+    print(f"[RESET] {user.username} - failed_attempts reset to 0")
 
 
-def generate_captcha_token() -> str:
-    import secrets
-    token = secrets.token_hex(16)
-    valid_captcha_tokens.add(token)
-    return token
+# Generate CAPTCHA code for user
+def generate_captcha_code(username: str) -> str:
+    # Generate random 5-character code (alphanumeric, uppercase)
+    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+    
+    # Store with expiration
+    active_captcha_codes[username] = {
+        "code": code,
+        "expires": datetime.utcnow() + timedelta(minutes=5)
+    }
+    
+    print(f"[CAPTCHA] Generated for {username}: {code}")
+    return code
 
 
+# Get active CAPTCHA code for user (for testing/attacks)
+def get_captcha_code(username: str) -> str:
+    if username in active_captcha_codes:
+        return active_captcha_codes[username]["code"]
+    return None
+
+
+# Get minutes until unlock
 def get_minutes_until_unlock(user: User) -> int:
     if not user.locked_until:
         return 0
@@ -93,16 +135,13 @@ def get_minutes_until_unlock(user: User) -> int:
     return max(0, int(delta.total_seconds() / 60) + 1)
 
 
-def generate_totp_secret() -> str:
-    return pyotp.random_base32()
+# Generate simple 6-digit TOTP code
+def generate_totp_code() -> str:
+    return ''.join(random.choices(string.digits, k=6))
 
 
-def get_totp_uri(user: User, issuer_name: str = "PasswordAuthResearch") -> str:
-    if not user.totp_secret:
-        return None
-    
-    totp = pyotp.TOTP(user.totp_secret)
-    return totp.provisioning_uri(
-        name=user.username,
-        issuer_name=issuer_name
-    )
+# Get user's TOTP code (for testing/attacks)
+def get_totp_code(user: User) -> str:
+    if user.totp_secret is not None:
+        return user.totp_secret
+    return None

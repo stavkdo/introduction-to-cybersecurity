@@ -1,8 +1,12 @@
 import axios from 'axios';
-import { API_BASE_URL, STORAGE_KEYS } from './constants';
+
+import { STORAGE_KEYS, API_BASE_URL } from './constants';
 
 const api = axios.create({
-  baseURL: API_BASE_URL
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 api.interceptors.request.use((config) => {
@@ -13,49 +17,42 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-const handleApiError = (error, defaultMessage) => {
-  let errorMessage = defaultMessage;
-  
-  if (error.response?.data?.detail) {
-    const detail = error.response.data.detail;
-    
-    if (typeof detail === 'string') {
-      errorMessage = detail;
-    } else if (detail.message) {
-      errorMessage = detail.message;
-    }
-  }
-  
-  return {
-    success: false,
-    error: errorMessage
-  };
-};
-
 const handleApiSuccess = (data) => ({
   success: true,
-  data
+  data,
 });
 
-export const register = async (username, password, password_strength = 'medium') => {
+const handleApiError = (error) => ({
+  success: false,
+  error: error.response?.data?.detail || error.message || 'An error occurred',
+  errorData: error.response?.data,  
+});
+
+
+export const register = async (username, password, passwordStrength) => {
   try {
     const { data } = await api.post('/register', {
       username,
       password,
-      password_strength
+      password_strength: passwordStrength,
     });
     return handleApiSuccess(data);
   } catch (error) {
-    return handleApiError(error, 'Registration failed');
+    return handleApiError(error);
   }
 };
 
-export const login = async (username, password, captcha_token = null, totp_code = null) => {
+
+export const login = async (username, password, captcha_code = null, totp_code = null) => {
+  console.log('[API LOGIN] Called with:', { username, password: '***', captcha_code, totp_code });
   try {
-    const payload = { username, password };
-    if (captcha_token) payload.captcha_token = captcha_token;
-    
     const endpoint = totp_code ? '/login_totp' : '/login';
+    
+    const payload = {
+      username,
+      password,
+      captcha_code 
+    };
     
     if (totp_code) {
       payload.totp_code = totp_code;
@@ -63,25 +60,51 @@ export const login = async (username, password, captcha_token = null, totp_code 
     
     const { data } = await api.post(endpoint, payload);
     return handleApiSuccess(data);
+    
   } catch (error) {
-    return handleApiError(error, 'Login failed');
+    return handleApiError(error);
   }
 };
+
+
+export const getCaptchaCode = async (username, groupSeed) => {
+  try {
+    const { data } = await api.get('/get_captcha', {
+      params: { username, group_seed: groupSeed }
+    });
+    return handleApiSuccess(data);
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+
+export const getTotpCode = async (username, groupSeed) => {
+  try {
+    const { data } = await api.get('/get_totp', {
+      params: { username, group_seed: groupSeed }
+    });
+    return handleApiSuccess(data);
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 
 export const getStats = async () => {
   try {
     const { data } = await api.get('/stats');
     return handleApiSuccess(data);
   } catch (error) {
-    return handleApiError(error, 'Failed to load stats');
+    return handleApiError(error);
   }
 };
 
-export const getCaptchaToken = async (groupSeed) => {
+export const getUsers = async () => {
   try {
-    const { data } = await api.get(`http://localhost:8000/admin/get_captcha_token?group_seed=${groupSeed}`);
+    const { data } = await api.get('/users');
     return handleApiSuccess(data);
   } catch (error) {
-    return handleApiError(error, 'Failed to get CAPTCHA token');
+    return handleApiError(error);
   }
 };

@@ -7,11 +7,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
+PROJECT_NAME = "Introduction to Cybersecurity"
 GROUP_SEED = os.getenv("GROUP_SEED", "1215067c7")
 DATABASE_URL = os.getenv("DATABASE_URL")
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 PEPPER = os.getenv("PEPPER", "default-pepper")
+FRONTEND_URL = "http://localhost:5173"
 
 
 class PasswordStrength(str, Enum):
@@ -44,13 +45,13 @@ class AttackResult(str, Enum):
 
 
 # ACTIVE CONFIGURATION - CHANGE TO TEST
-PROTECTION_MODE = ProtectionMode.NONE
+PROTECTION_MODE = ProtectionMode.TOTP
 HASH_MODE = HashMode.PLAIN
 
 # PROTECTION SETTINGS
 MAX_FAILED_ATTEMPTS = 5
+MAX_CAPTCHA_FAILED_ATTEMPTS = 3
 LOCKOUT_DURATION_MINUTES = 3
-CAPTCHA_REQUIRED_AFTER = 3
 
 # Hash parameters
 BCRYPT_COST = 12

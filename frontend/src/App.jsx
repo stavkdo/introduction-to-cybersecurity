@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
+import { Box } from '@mui/material';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import Footer from './components/Footer';
 import { ROUTES } from './constants';
-import { getCurrentUser, clearSession, isAuthenticated } from './utils/auth'; 
+import { getCurrentUser, clearSession, isAuthenticated } from './utils/auth';
 
-function App() {
+const App = () => {
   const [currentPage, setCurrentPage] = useState(ROUTES.HOME);
   const [user, setUser] = useState(null);
 
@@ -27,7 +28,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    clearSession();  
+    clearSession();
     setUser(null);
     setCurrentPage(ROUTES.HOME);
     console.log('[APP] User logged out');
@@ -59,19 +60,20 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navbar 
         user={user} 
-        onLogout={handleLogout}  
+        onLogout={handleLogout}
         onNavigate={handleNavigate}
       />
       
-      <main className="app-content">
+      <Box component="main" sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {renderPage()}
-      </main>
+      </Box>
+      
       <Footer />
-    </div>
+    </Box>
   );
-}
+};
 
 export default App;

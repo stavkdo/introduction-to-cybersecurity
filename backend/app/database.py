@@ -45,7 +45,7 @@ class AttemptLog(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True, nullable=False)
-    group_seed = Column(Integer, nullable=False)
+    group_seed = Column(String(50), nullable=False)
     username = Column(String(100), nullable=False, index=True)
     hash_mode = Column(String(20), nullable=False)
     protection_flags = Column(Integer, nullable=False)
