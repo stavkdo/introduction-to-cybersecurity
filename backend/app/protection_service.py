@@ -15,6 +15,9 @@ from app.config import (
     MAX_CAPTCHA_FAILED_ATTEMPTS,
 )
 from app.database import User
+from captcha.image import ImageCaptcha
+import base64
+from io import BytesIO
 
 
 # Captcha Format: {username: {"code": "A3X7K", "expires": datetime}}
@@ -107,10 +110,8 @@ def reset_protection_state(user: User, db: Session):
 
 # Generate CAPTCHA code for user
 def generate_captcha_code(username: str) -> str:
-    # Generate random 5-character code (alphanumeric, uppercase)
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     
-    # Store with expiration
     active_captcha_codes[username] = {
         "code": code,
         "expires": datetime.utcnow() + timedelta(minutes=5)
@@ -118,6 +119,20 @@ def generate_captcha_code(username: str) -> str:
     
     print(f"[CAPTCHA] Generated for {username}: {code}")
     return code
+
+
+# Generate CAPTCHA image and return as base64
+def generate_captcha_image(code: str) -> str:
+    image = ImageCaptcha(width=280, height=90)
+    
+    # Generate image
+    data = image.generate(code)
+    
+    # Convert to base64
+    buffered = BytesIO(data.read())
+    img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+    
+    return img_base64
 
 
 # Get active CAPTCHA code for user (for testing/attacks)
@@ -145,3 +160,23 @@ def get_totp_code(user: User) -> str:
     if user.totp_secret is not None:
         return user.totp_secret
     return None
+
+# Clean up protection data that's not needed for current mode
+def cleanup_stale_protection_data(user: User, db: Session):
+    changed = False
+    
+    # If not LOCKOUT or CAPTCHA mode, clear failed_attempts and locks
+    if PROTECTION_MODE not in [ProtectionMode.LOCKOUT, ProtectionMode.CAPTCHA]:
+        if user.failed_attempts > 0:
+            user.failed_attempts = 0
+            changed = True
+        if user.locked_until is not None:
+            user.locked_until = None
+            changed = True
+    
+    # If not TOTP mode, we could clear totp_secret, but let's keep it
+    # in case mode switches back (user preference)
+    
+    if changed:
+        db.commit()
+        print(f"[CLEANUP] Cleared stale protection data for {user.username}")

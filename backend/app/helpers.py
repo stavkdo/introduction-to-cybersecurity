@@ -96,9 +96,11 @@ def check_account_lockout(user: User):
             detail=f"Account locked. Try again in {minutes_left} minutes."
         )
 
-
+  
 # check if captcha is required and validate
 def check_captcha_requirement(user: User, captcha_code: str):
+    from app.protection_service import generate_captcha_image   
+
     if requires_captcha(user):
         if not is_captcha_valid(user.username, captcha_code if captcha_code else ""):
             existing_code = get_captcha_code(user.username)
@@ -106,15 +108,18 @@ def check_captcha_requirement(user: User, captcha_code: str):
                 captcha_code_generated = generate_captcha_code(user.username)
             else:
                 captcha_code_generated = existing_code
-
+           
+            # Generate image
+            captcha_image_base64 = generate_captcha_image(captcha_code_generated)
+            
             print(f"[CAPTCHA] Required for {user.username}: {captcha_code_generated} (attempts: {user.failed_attempts})")
             
             raise HTTPException(
                 status_code=403,
                 detail={
                     "error": "captcha_required",
-                    "message": f"CAPTCHA required: {captcha_code_generated}",
-                    "captcha_code": captcha_code_generated
+                    "message": "CAPTCHA required",
+                    "captcha_image": captcha_image_base64 
                 }
             )
         
@@ -138,17 +143,17 @@ def check_totp_requirement(user: User, db: Session) -> bool:
     
     return True
 
-
 # verify user password and handle failed attempts
 def verify_user_password(user: User, password: str, db: Session):
     if not verify_password(password, user.password_hash, HashMode(user.hash_mode)):
-        # Increment failed_attempts for LOCKOUT and CAPTCHA modes
+        # Only track failed attempts for LOCKOUT and CAPTCHA modes
         if PROTECTION_MODE in [ProtectionMode.LOCKOUT, ProtectionMode.CAPTCHA]:
             user.failed_attempts += 1
-            db.commit()  # COMMIT IMMEDIATELY
-            apply_lockout(user, db)  # Only locks if LOCKOUT mode
+            db.commit()
+            apply_lockout(user, db)  # Only actually locks if LOCKOUT mode
             print(f"[FAILED] Wrong password: {user.username} (attempts: {user.failed_attempts}, mode: {PROTECTION_MODE.name})")
         else:
+            # In NONE or TOTP mode, don't track attempts
             print(f"[FAILED] Wrong password: {user.username} (no tracking - mode: {PROTECTION_MODE.name})")
         
         raise HTTPException(status_code=401, detail="Invalid credentials")

@@ -1,65 +1,40 @@
 import { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, Alert } from '@mui/material';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
-import { getTotpCode } from '../api';
-import { PROJECT } from '../constants';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
-const TotpSection = ({ username, value, onChange, disabled, initialCode = '' }) => {
-  const [displayedCode, setDisplayedCode] = useState(initialCode);
-  const [loading, setLoading] = useState(false);
+const CaptchaSection = ({ username, value, onChange, disabled, initialImage = '' }) => {
+  const [captchaImage, setCaptchaImage] = useState(initialImage);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (initialCode) {
-      console.log('[TOTP] initialCode changed to:', initialCode);
-      setDisplayedCode(initialCode);
-      onChange(initialCode);  // Auto-fill
+    if (initialImage) {
+      console.log('[CAPTCHA] Received new image');
+      setCaptchaImage(initialImage);
     }
-  }, [initialCode, onChange]);
+  }, [initialImage]);
 
-  const handleShowCode = async () => {
-    if (!username) {
-      setError('Please enter username first');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    
-    try {
-      const result = await getTotpCode(username, PROJECT.GROUP_SEED);
-      if (result.success) {
-        const code = result.data.totp_code;
-        console.log('[TOTP] Got code from admin endpoint:', code);
-        setDisplayedCode(code);
-        onChange(code);
-      } else {
-        setError('User does not have TOTP enabled. Try logging in first.');
-      }
-    } catch (err) {
-      console.error('[TOTP] Error getting code:', err);
-      setError('Failed to get TOTP code');
-    } finally {
-      setLoading(false);
-    }
+  const handleInputChange = (e) => {
+    const newValue = e.target.value.toUpperCase();
+    console.log('[CAPTCHA] Input changed to:', `'${newValue}'`);
+    onChange(newValue);
   };
 
-  console.log('[TOTP] Render - value prop:', `'${value}'`, 'displayedCode:', `'${displayedCode}'`);
+  console.log('[CAPTCHA] Render - value:', `'${value}'`, 'hasImage:', !!captchaImage);
 
   return (
     <Box
       sx={{
         p: 2,
-        bgcolor: 'var(--totp-bg)',
+        bgcolor: 'var(--captcha-bg)',
         borderRadius: 1,
-        border: '2px solid var(--totp-border)',
+        border: '2px solid var(--captcha-border)',
       }}
     >
-      <Typography variant="subtitle2" fontWeight="600" color="var(--totp-text)" gutterBottom>
-        🔐 Two-Factor Authentication (TOTP)
+      <Typography variant="subtitle2" fontWeight="600" color="var(--captcha-text)" gutterBottom>
+        🔒 CAPTCHA Verification Required
       </Typography>
       
-      {displayedCode && (
+      {captchaImage && (
         <Box
           sx={{
             my: 2,
@@ -70,53 +45,37 @@ const TotpSection = ({ username, value, onChange, disabled, initialCode = '' }) 
           }}
         >
           <Typography variant="caption" color="text.secondary" display="block" gutterBottom fontWeight="600">
-            Your TOTP code:
+            Type the characters you see in the image:
           </Typography>
-          <Typography
-            variant="h3"
+          <Box
+            component="img"
+            src={`data:image/png;base64,${captchaImage}`}
+            alt="CAPTCHA"
             sx={{
-              fontFamily: 'monospace',
-              letterSpacing: 8,
-              fontWeight: 'bold',
-              border: '2px solid var(--totp-border)',
-              p: 1,
+              maxWidth: '100%',
+              height: 'auto',
+              border: '1px solid var(--captcha-border)',
               borderRadius: 1,
-              bgcolor: 'var(--totp-code-bg)',
-              userSelect: 'all',
+              my: 1,
             }}
-          >
-            {displayedCode}
-          </Typography>
+          />
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-            ℹ️ This code has been auto-filled below
+            ℹ️ Enter the code exactly as shown
           </Typography>
         </Box>
       )}
       
       <TextField
         fullWidth
-        label="Enter 6-digit TOTP code"
-        placeholder="Click button to get code"
+        label="Enter CAPTCHA code"
+        placeholder="Type what you see"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled || loading}
+        onChange={handleInputChange}
+        disabled={disabled}
         required
-        inputProps={{ maxLength: 6 }}
         sx={{ mt: 2, bgcolor: 'var(--bg-white)' }}
-        helperText={value ? `Code entered: ${value}` : 'Click "Show TOTP Code" to get your code'}
+        helperText={value ? `You entered: ${value}` : 'Type the characters from the image above'}
       />
-      
-      <Button
-        fullWidth
-        variant="contained"
-        color="info"
-        onClick={handleShowCode}
-        disabled={disabled || loading || !username}
-        startIcon={<VpnKeyIcon />}
-        sx={{ mt: 2 }}
-      >
-        {loading ? 'Loading...' : 'Show TOTP Code'}
-      </Button>
       
       {error && (
         <Alert severity="error" sx={{ mt: 2 }}>
@@ -127,4 +86,4 @@ const TotpSection = ({ username, value, onChange, disabled, initialCode = '' }) 
   );
 };
 
-export default TotpSection;
+export default CaptchaSection;

@@ -67,18 +67,6 @@ export const login = async (username, password, captcha_code = null, totp_code =
 };
 
 
-export const getCaptchaCode = async (username, groupSeed) => {
-  try {
-    const { data } = await api.get('/get_captcha', {
-      params: { username, group_seed: groupSeed }
-    });
-    return handleApiSuccess(data);
-  } catch (error) {
-    return handleApiError(error);
-  }
-};
-
-
 export const getTotpCode = async (username, groupSeed) => {
   try {
     const { data } = await api.get('/get_totp', {

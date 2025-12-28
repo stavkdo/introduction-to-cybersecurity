@@ -17,8 +17,9 @@ argon2-cffi==23.1.0
 # Security - JWT Tokens
 python-jose[cryptography]==3.3.0
 
-# Security - TOTP
+# Security - TOTP and CAPTCHA
 pyotp==2.9.0
+captcha
 
 # HTTP Client
 requests==2.32.3

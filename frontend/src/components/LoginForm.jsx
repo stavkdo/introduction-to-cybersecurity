@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Box, 
   TextField, 
@@ -27,13 +27,27 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister, protectionMode }) => {
   const [loading, setLoading] = useState(false);
 
   const [showCaptcha, setShowCaptcha] = useState(false);
-  const [showTotp, setShowTotp] = useState(false);  
+  const [showTotp, setShowTotp] = useState(false);
 
-  const [displayedCaptchaCode, setDisplayedCaptchaCode] = useState('');
+  const [displayedCaptchaImage, setDisplayedCaptchaImage] = useState('');
   const [displayedTotpCode, setDisplayedTotpCode] = useState('');
 
+  // Reset protection-specific state when mode changes
+  useEffect(() => {
+    console.log('[LOGINFORM] Protection mode changed to:', protectionMode);
+    
+    // Clear all protection states
+    setShowCaptcha(false);
+    setShowTotp(false);
+    setCaptchaCode('');
+    setTotpCode('');
+    setDisplayedCaptchaImage('');
+    setDisplayedTotpCode('');
+    setError('');
+  }, [protectionMode]);
+
   const needsCaptcha = protectionMode === 'CAPTCHA' && showCaptcha;
-  const needsTotp = protectionMode === 'TOTP' && showTotp;  
+  const needsTotp = protectionMode === 'TOTP' && showTotp;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,20 +55,7 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister, protectionMode }) => {
     setSuccess('');
     setLoading(true);
 
-    console.log('[FORM] handleSubmit called');
-    console.log('[FORM] State values:', { 
-      username, 
-      password: '***', 
-      captchaCode: `'${captchaCode}'`, 
-      totpCode: `'${totpCode}'`,
-      showCaptcha,
-      showTotp,
-      needsCaptcha,
-      needsTotp
-    });
-
     try {
-      console.log('[FORM] Calling login() with totpCode:', `'${totpCode}'`);
       const result = await login(username, password, captchaCode, totpCode);
 
       if (result.success) {
@@ -66,39 +67,45 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister, protectionMode }) => {
         }, 1000);
         
       } else {
-        console.log('[FORM] Login failed, result:', result);
-        
         let errorDetail = result.error;
         
+        // Handle error response
         if (typeof errorDetail === 'object' && errorDetail !== null) {
-          console.log('[FORM] Error detail object:', errorDetail);
           
-          if (errorDetail.error === 'captcha_required' && errorDetail.captcha_code) {
-            console.log('[FORM] Setting CAPTCHA:', errorDetail.captcha_code);
+          // CAPTCHA required
+          if (errorDetail.error === 'captcha_required' && errorDetail.captcha_image) {
             setShowCaptcha(true);
-            setDisplayedCaptchaCode(errorDetail.captcha_code);
-            setError(`CAPTCHA required. Enter the code shown below.`);
-          } else if (errorDetail.error === 'totp_required') {
-            console.log('[FORM] Setting TOTP required');
-            setShowTotp(true);            
-            // Extract TOTP code if included in error
+            setDisplayedCaptchaImage(errorDetail.captcha_image);
+            setError('CAPTCHA required. Enter the code from the image.');
+          } 
+          
+          // TOTP required
+          else if (errorDetail.error === 'totp_required') {
+            setShowTotp(true);
+            
             if (errorDetail.totp_code) {
               setDisplayedTotpCode(errorDetail.totp_code);
               setError('Two-Factor Authentication required. Code displayed below.');
             } else {
               setError('Two-Factor Authentication required. Click "Show TOTP Code" below.');
             }
-          }else {
+          } 
+          
+          // Other errors
+          else {
             setError(errorDetail.message || JSON.stringify(errorDetail));
           }
-        } else {
+        } 
+        
+        // String error messages
+        else {
           const errorMsg = String(errorDetail).toLowerCase();
           
           if (errorMsg.includes('captcha')) {
             setShowCaptcha(true);
             setError('CAPTCHA required after multiple failed attempts');
           } else if (errorMsg.includes('totp')) {
-            setShowTotp(true);  // ← ADD THIS
+            setShowTotp(true);
             setError('Two-Factor Authentication required. Click "Show TOTP Code" below.');
           } else {
             setError(errorDetail);
@@ -144,12 +151,9 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister, protectionMode }) => {
           <CaptchaSection
             username={username}
             value={captchaCode}
-            onChange={(newValue) => {
-              console.log('[FORM] CAPTCHA onChange called with:', `'${newValue}'`);
-              setCaptchaCode(newValue);
-            }}
+            onChange={setCaptchaCode}
             disabled={loading}
-            initialCode={displayedCaptchaCode}
+            initialImage={displayedCaptchaImage}
           />
         )}
         
@@ -157,10 +161,7 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister, protectionMode }) => {
           <TotpSection
             username={username}
             value={totpCode}
-            onChange={(newValue) => {
-              console.log('[FORM] TOTP onChange called with:', `'${newValue}'`);
-              setTotpCode(newValue);
-            }}
+            onChange={setTotpCode}
             disabled={loading}
             initialCode={displayedTotpCode}
           />
