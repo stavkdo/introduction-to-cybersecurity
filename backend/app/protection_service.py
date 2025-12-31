@@ -107,18 +107,22 @@ def reset_protection_state(user: User, db: Session):
     db.commit()
     print(f"[RESET] {user.username} - failed_attempts reset to 0")
 
-
-# Generate CAPTCHA code for user
-def generate_captcha_code(username: str) -> str:
-    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+# Generate random 5-character CAPTCHA code
+def generate_captcha_code(username: str, force_new: bool = False) -> str:
+    # If forcing new or doesn't exist, generate fresh code
+    if force_new or username not in active_captcha_codes:
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+        
+        active_captcha_codes[username] = {
+            "code": code,
+            "expires": datetime.utcnow() + timedelta(minutes=5)
+        }
+        
+        print(f"[CAPTCHA] Generated NEW code for {username}: {code}")
+        return code
     
-    active_captcha_codes[username] = {
-        "code": code,
-        "expires": datetime.utcnow() + timedelta(minutes=5)
-    }
-    
-    print(f"[CAPTCHA] Generated for {username}: {code}")
-    return code
+    # Return existing code
+    return active_captcha_codes[username]["code"]
 
 
 # Generate CAPTCHA image and return as base64
