@@ -81,7 +81,7 @@ def is_captcha_valid(username: str, code: str) -> bool:
 
 # Verify TOTP code (simple static code)
 def verify_totp_code(user: User, code: str) -> bool:
-    if not user.totp_secret is None:
+    if not user.totp_secret:
         return False
     
     return str(user.totp_secret).strip() == str(code).strip()
