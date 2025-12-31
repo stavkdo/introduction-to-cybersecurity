@@ -102,6 +102,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         }
     }
 
+
 # Main login endpoint
 # Parameters: username, password, captcha_code (optional)
 # Returns: token on success, or error with protection requirements (CAPTCHA/TOTP)
