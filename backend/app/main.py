@@ -48,7 +48,7 @@ class LoginTOTPRequest(BaseModel):
     username: str
     password: str
     totp_code: str
-    captcha_token: str = None
+    captcha_code: str = None
 
 
 

@@ -53,7 +53,7 @@ def log_attempt(db: Session, result: AttackResult, username: str, hash_mode: Has
         group_seed=GROUP_SEED,
         username=username,
         hash_mode=hash_mode.value,
-        protection_flags=PROTECTION_MODE.value,
+        protection_flags=PROTECTION_MODE.name,
         result=result.value,
         latency_ms=latency_ms,
         ip_address=ip
@@ -66,7 +66,7 @@ def log_attempt(db: Session, result: AttackResult, username: str, hash_mode: Has
         "group_seed": GROUP_SEED,
         "username": username,
         "hash_mode": hash_mode.value,
-        "protection_flags": PROTECTION_MODE.value,
+        "protection_flags": PROTECTION_MODE.name,
         "result": result.value,
         "latency_ms": latency_ms
     })

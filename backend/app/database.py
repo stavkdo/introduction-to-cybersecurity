@@ -48,7 +48,7 @@ class AttemptLog(Base):
     group_seed = Column(String(50), nullable=False)
     username = Column(String(100), nullable=False, index=True)
     hash_mode = Column(String(20), nullable=False)
-    protection_flags = Column(Integer, nullable=False)
+    protection_flags = Column(String(20), nullable=False)
     result = Column(String(20), nullable=False)
     latency_ms = Column(Float, nullable=False)
     ip_address = Column(String(45))
