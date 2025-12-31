@@ -14,12 +14,11 @@ pydantic==2.10.3
 bcrypt==4.2.1
 argon2-cffi==23.1.0
 
-# Security - JWT Tokens
+# Security
 python-jose[cryptography]==3.3.0
-
-# Security - TOTP and CAPTCHA
 pyotp==2.9.0
 captcha
+slowapi
 
 # HTTP Client
 requests==2.32.3

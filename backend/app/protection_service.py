@@ -169,7 +169,6 @@ def get_totp_code(user: User) -> str:
 def cleanup_stale_protection_data(user: User, db: Session):
     changed = False
     
-    # If not LOCKOUT or CAPTCHA mode, clear failed_attempts and locks
     if PROTECTION_MODE not in [ProtectionMode.LOCKOUT, ProtectionMode.CAPTCHA]:
         if user.failed_attempts > 0:
             user.failed_attempts = 0
@@ -178,9 +177,41 @@ def cleanup_stale_protection_data(user: User, db: Session):
             user.locked_until = None
             changed = True
     
-    # If not TOTP mode, we could clear totp_secret, but let's keep it
-    # in case mode switches back (user preference)
-    
     if changed:
         db.commit()
         print(f"[CLEANUP] Cleared stale protection data for {user.username}")
+
+
+# Rate Limiting
+rate_limit_requests = {}
+def check_rate_limit(ip: str, max_per_minute: int = 10, endpoint: str = "login"):
+    now = datetime.utcnow()
+    cutoff = now - timedelta(seconds=60)
+    
+    if ip not in rate_limit_requests:
+        rate_limit_requests[ip] = []
+    
+    rate_limit_requests[ip] = [
+        (ts, ep) for ts, ep in rate_limit_requests[ip]
+        if ts > cutoff
+    ]
+    
+    endpoint_requests = [
+        ts for ts, ep in rate_limit_requests[ip]
+        if ep == endpoint
+    ]
+    
+    if len(endpoint_requests) >= max_per_minute:
+        oldest = min(endpoint_requests)
+        retry_after = int((oldest + timedelta(seconds=60) - now).total_seconds())
+        
+        print(f"[RATE_LIMIT] {ip} exceeded limit for {endpoint} ({len(endpoint_requests)}/{max_per_minute})")
+        
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many requests. Try again in {retry_after} seconds."
+        )
+    
+    rate_limit_requests[ip].append((now, endpoint))
+    print(f"[RATE_LIMIT] {ip} - {len(endpoint_requests) + 1}/{max_per_minute} requests for {endpoint}")

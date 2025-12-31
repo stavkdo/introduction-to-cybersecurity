@@ -29,11 +29,11 @@ class HashMode(str, Enum):
 
 
 class ProtectionMode(IntEnum):
-    """Protection mechanisms"""
     NONE = 0
     LOCKOUT = 1
     CAPTCHA = 2
     TOTP = 3
+    RATE_LIMITING = 4
 
 
 class AttackResult(str, Enum):
@@ -52,6 +52,7 @@ HASH_MODE = HashMode.PLAIN
 MAX_FAILED_ATTEMPTS = 5
 MAX_CAPTCHA_FAILED_ATTEMPTS = 3
 LOCKOUT_DURATION_MINUTES = 3
+MAX_LOGIN_REQUESTS_PER_MINUTE = 10
 
 # Hash parameters
 BCRYPT_COST = 12

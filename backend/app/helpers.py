@@ -27,8 +27,7 @@ from app.protection_service import (
     apply_lockout,
     reset_protection_state,
     get_minutes_until_unlock,
-    generate_captcha_code,
-    get_captcha_code 
+    generate_captcha_code
 )
 
 

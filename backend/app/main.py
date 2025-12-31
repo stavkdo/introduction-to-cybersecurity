@@ -9,11 +9,11 @@ import time
 
 from app.database import get_db, User, AttemptLog
 from app.config import (
-    GROUP_SEED, PROTECTION_MODE, HASH_MODE, PROJECT_NAME, FRONTEND_URL,
+    GROUP_SEED, PROTECTION_MODE, HASH_MODE, PROJECT_NAME, FRONTEND_URL, MAX_LOGIN_REQUESTS_PER_MINUTE,
     AttackResult, HashMode, PasswordStrength, ProtectionMode
 )
 from app.hash_utils import hash_password
-from app.protection_service import is_account_locked, requires_captcha
+from app.protection_service import check_rate_limit, requires_captcha
 from app.helpers import (
     find_user, validate_user_exists, check_account_lockout,
     check_captcha_requirement, check_totp_requirement,
@@ -116,6 +116,9 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
     user = None
     result = AttackResult.FAILED
     
+    if PROTECTION_MODE == ProtectionMode.RATE_LIMITING:
+        check_rate_limit(ip, MAX_LOGIN_REQUESTS_PER_MINUTE, "login")
+    
     try:
         user = find_user(db, request.username)
         validate_user_exists(user, request.username)
@@ -202,6 +205,9 @@ def login_totp(request: LoginTOTPRequest, http_request: Request, db: Session = D
     
     user = None
     result = AttackResult.FAILED
+
+    if PROTECTION_MODE == ProtectionMode.RATE_LIMITING:
+        check_rate_limit(ip, MAX_LOGIN_REQUESTS_PER_MINUTE, "login")
     
     try:
         user = find_user(db, request.username)
