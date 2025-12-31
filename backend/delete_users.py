@@ -19,7 +19,6 @@ def delete_all_users():
         
         remaining = db.query(User).count()
         print(f"[SUCCESS] Deleted {count} users")
-        print(f"[INFO] Remaining users: {remaining}")
         
     except Exception as e:
         db.rollback()
@@ -32,4 +31,3 @@ def delete_all_users():
 if __name__ == "__main__":
     print("[DELETE] Starting user deletion...")
     delete_all_users()
-    print("[DELETE] Done")
