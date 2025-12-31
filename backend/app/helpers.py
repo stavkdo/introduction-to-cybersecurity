@@ -103,12 +103,8 @@ def check_captcha_requirement(user: User, captcha_code: str):
 
     if requires_captcha(user):
         if not is_captcha_valid(user.username, captcha_code if captcha_code else ""):
-            existing_code = get_captcha_code(user.username)
-            if not existing_code:
-                captcha_code_generated = generate_captcha_code(user.username)
-            else:
-                captcha_code_generated = existing_code
-           
+
+            captcha_code_generated = generate_captcha_code(user.username)
             # Generate image
             captcha_image_base64 = generate_captcha_image(captcha_code_generated)
             

@@ -180,7 +180,7 @@ def password_sparying(password, session, start_time,attempt_count):
 
 def generate_code():
     length = 6
-    allowed_characters = string.ascii_letters + string.digits
+    allowed_characters = string.ascii_uppercase + string.digits
     otp = ''.join(secrets.choice(allowed_characters) for _ in range(length))
     return otp
     
