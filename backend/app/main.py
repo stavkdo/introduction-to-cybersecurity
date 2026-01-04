@@ -41,13 +41,14 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+    totp_code: str = None
     captcha_code: str = None
 
 
 class LoginTOTPRequest(BaseModel):
     username: str
     password: str
-    totp_code: str
+    totp_code: str = None
     captcha_code: str = None
 
 
@@ -75,8 +76,14 @@ def root():
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username == request.username).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Username already exists")
-    
+        
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "error": "Invalid Username",
+                "message": "Username already exists"
+            }
+        )
     password_hash = hash_password(request.password, HASH_MODE)
     
     user = User(
@@ -133,18 +140,18 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         
         if check_totp_requirement(user, db):
             latency = (time.time() - start_time) * 1000
-            log_attempt(db, AttackResult.TOTP_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
-            
-            print(f"[TOTP] Required for {user.username}: {user.totp_secret}")
-            
+            log_attempt(db,AttackResult.TOTP_REQUIRED,user.username,HashMode(user.hash_mode),latency,ip)
+
+            print(f"[TOTP] Required for {user.username}")
+
             raise HTTPException(
                 status_code=403,
                 detail={
-                    "error": "totp_required", 
-                    "message": "Two-Factor Authentication required",
-                    "totp_code": user.totp_secret
+                    "error": "totp_required",
+                    "message": "Two-Factor Authentication required"
                 }
             )
+
         
         result = AttackResult.SUCCESS
         latency = (time.time() - start_time) * 1000
@@ -153,44 +160,60 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
     
     except HTTPException as http_exc:
         latency = (time.time() - start_time) * 1000
-        
-        if http_exc.status_code == 423:
-            result = AttackResult.LOCKED
-        elif http_exc.status_code == 403:
-            if user and isinstance(http_exc.detail, dict):
-                if http_exc.detail.get("error") == "captcha_required":
-                    result = AttackResult.CAPTCHA_REQUIRED
-                elif http_exc.detail.get("error") == "totp_required":
-                    result = AttackResult.TOTP_REQUIRED
+        result = AttackResult.FAILED
+
+        # בדיקה אם detail הוא dict או string
+        if isinstance(http_exc.detail, dict):
+            error_code = http_exc.detail.get("error")
+            message = http_exc.detail.get("message", str(http_exc.detail))
         else:
+            error_code = None
+            message = str(http_exc.detail)
+
+        if http_exc.status_code == 401:
             result = AttackResult.FAILED
-            
-            if user and PROTECTION_MODE == ProtectionMode.CAPTCHA and requires_captcha(user):
-                from app.protection_service import generate_captcha_code, generate_captcha_image
-                
-                new_captcha_code = generate_captcha_code(user.username, force_new=True)
-                new_captcha_image = generate_captcha_image(new_captcha_code)
-                
-                print(f"[CAPTCHA] Regenerated after wrong password: {new_captcha_code}")
-                
-                http_exc.detail = {
-                    "error": "captcha_required",
-                    "message": "Invalid credentials. New CAPTCHA generated.",
-                    "captcha_image": new_captcha_image
-                }
-                http_exc.status_code = 403
+        elif http_exc.status_code == 403:
+            if error_code == "captcha_required":
                 result = AttackResult.CAPTCHA_REQUIRED
-        
-        username = user.username if user else request.username
-        hash_mode = HashMode(user.hash_mode) if user else HASH_MODE
-        log_attempt(db, result, username, hash_mode, latency, ip)       
+            elif error_code == "totp_required":
+                result = AttackResult.TOTP_REQUIRED
+
+        # CAPTCHA חדש רק אם במוד CAPTCHA
+        if user and PROTECTION_MODE == ProtectionMode.CAPTCHA:
+            from app.protection_service import generate_captcha_code, generate_captcha_image
+            new_code = generate_captcha_code(user.username, force_new=True)
+            new_image = generate_captcha_image(new_code)
+            http_exc.detail = {
+                "error": "captcha_required",
+                "message": message,
+                "captcha_image": new_image
+            }
+
+        log_attempt(
+            db,
+            result,
+            user.username if user else request.username,
+            HashMode(user.hash_mode) if user else HASH_MODE,
+            latency,
+            ip
+        )
+
         raise
+
+
+
     
     except Exception as e:
         latency = (time.time() - start_time) * 1000
         log_attempt(db, AttackResult.FAILED, request.username, HASH_MODE, latency, ip)
         print(f"[ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(
+            status_code=500, 
+            detail= { 
+                "error":"Internal server error",
+                "message": "Internal server error"
+            }
+        )
 
 
 # Login endpoint with TOTP verification
@@ -220,7 +243,22 @@ def login_totp(request: LoginTOTPRequest, http_request: Request, db: Session = D
         check_captcha_requirement(user, request.captcha_code)
         
         verify_user_password(user, request.password, db)
-        check_totp_requirement(user, db)
+
+        if not check_totp_requirement(user, db):
+            raise HTTPException(
+                status_code=400,
+                detail="TOTP not enabled for this user"
+            )
+
+        if not request.totp_code:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "totp_required",
+                    "message": "Two-Factor Authentication required"
+                }
+            )
+
         verify_user_totp(user, request.totp_code, db)
         
         result = AttackResult.SUCCESS
@@ -231,45 +269,59 @@ def login_totp(request: LoginTOTPRequest, http_request: Request, db: Session = D
     
     except HTTPException as http_exc:
         latency = (time.time() - start_time) * 1000
-        
-        if http_exc.status_code == 423:
-            result = AttackResult.LOCKED
-        elif http_exc.status_code == 403:
-            if user and isinstance(http_exc.detail, dict):
-                if http_exc.detail.get("error") == "captcha_required":
-                    result = AttackResult.CAPTCHA_REQUIRED
-                elif http_exc.detail.get("error") == "totp_required":
-                    result = AttackResult.TOTP_REQUIRED
+        result = AttackResult.FAILED
+
+        # בדיקה אם detail הוא dict או string
+        if isinstance(http_exc.detail, dict):
+            error_code = http_exc.detail.get("error")
+            message = http_exc.detail.get("message", str(http_exc.detail))
         else:
+            error_code = None
+            message = str(http_exc.detail)
+
+        if http_exc.status_code == 401:
             result = AttackResult.FAILED
-            
-            if user and PROTECTION_MODE == ProtectionMode.CAPTCHA and requires_captcha(user):
-                from app.protection_service import generate_captcha_code, generate_captcha_image
-                
-                new_captcha_code = generate_captcha_code(user.username, force_new=True)
-                new_captcha_image = generate_captcha_image(new_captcha_code)
-                
-                print(f"[CAPTCHA] Regenerated after wrong password/TOTP: {new_captcha_code}")
-                
-                http_exc.detail = {
-                    "error": "captcha_required",
-                    "message": "Invalid credentials. New CAPTCHA generated.",
-                    "captcha_image": new_captcha_image
-                }
-                http_exc.status_code = 403
+        elif http_exc.status_code == 403:
+            if error_code == "captcha_required":
                 result = AttackResult.CAPTCHA_REQUIRED
-        
-        username = user.username if user else request.username
-        hash_mode = HashMode(user.hash_mode) if user else HASH_MODE
-        log_attempt(db, result, username, hash_mode, latency, ip)
-        
+            elif error_code == "totp_required":
+                result = AttackResult.TOTP_REQUIRED
+
+        # CAPTCHA חדש רק אם במוד CAPTCHA
+        if user and PROTECTION_MODE == ProtectionMode.CAPTCHA:
+            from app.protection_service import generate_captcha_code, generate_captcha_image
+            new_code = generate_captcha_code(user.username, force_new=True)
+            new_image = generate_captcha_image(new_code)
+            http_exc.detail = {
+                "error": "captcha_required",
+                "message": message,
+                "captcha_image": new_image
+            }
+
+        log_attempt(
+            db,
+            result,
+            user.username if user else request.username,
+            HashMode(user.hash_mode) if user else HASH_MODE,
+            latency,
+            ip
+        )
+
         raise
+
+
     
     except Exception as e:
         latency = (time.time() - start_time) * 1000
         log_attempt(db, AttackResult.FAILED, request.username, HASH_MODE, latency, ip)
         print(f"[ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Internal server error",
+                "message": "Internal server error"
+                }
+        )
 
 
 # Get TOTP code for user (for testing/attacks)
@@ -280,17 +332,35 @@ def get_totp(username: str, group_seed: str, db: Session = Depends(get_db)):
     from app.protection_service import get_totp_code
     
     if group_seed != GROUP_SEED:
-        raise HTTPException(status_code=403, detail="Invalid group_seed")
+        raise HTTPException(
+            status_code=403, 
+            detail={
+                "error": "Invalid group_seed",
+                "message": "Invalid group_seed"
+                }
+        )
     
     user = db.query(User).filter(User.username == username).first()
     
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=404, 
+            detail={
+                "error": "Invalid user",
+                "message": "User not found"
+                }
+        )
     
     code = get_totp_code(user)
     
     if not code:
-        raise HTTPException(status_code=404, detail="User does not have TOTP enabled")
+        raise HTTPException(
+            status_code=404, 
+            detail={
+                "error": "Invalid user",
+                "message": "User does not have TOTP enabled"
+                }
+        )
     
     print(f"[ADMIN] TOTP code requested for {username}: {code}")    
     return {"totp_code": code}

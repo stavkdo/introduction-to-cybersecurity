@@ -210,7 +210,7 @@ def check_rate_limit(ip: str, max_per_minute: int = 10, endpoint: str = "login")
         from fastapi import HTTPException
         raise HTTPException(
             status_code=429,
-            detail=f"Too many requests. Try again in {retry_after} seconds."
+            detail={"error":"Rate limiting", "message": f"Too many requests. Try again in {retry_after} seconds."}
         )
     
     rate_limit_requests[ip].append((now, endpoint))

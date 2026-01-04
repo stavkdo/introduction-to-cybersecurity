@@ -81,7 +81,10 @@ def find_user(db: Session, username: str) -> User:
 def validate_user_exists(user: User, username: str):
     if not user:
         print(f"[FAILED] User not found: {username}")
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=401, 
+            detail= {"error": "Invalid credentials", "message": "Invalid username or password"})
+        
 
 
 # check if account is locked
@@ -92,7 +95,7 @@ def check_account_lockout(user: User):
         
         raise HTTPException(
             status_code=423,
-            detail=f"Account locked. Try again in {minutes_left} minutes."
+            detail= {"error": "Locked", "message": f"Account locked. Try again in {minutes_left} minutes."}
         )
 
   
@@ -151,7 +154,14 @@ def verify_user_password(user: User, password: str, db: Session):
             # In NONE or TOTP mode, don't track attempts
             print(f"[FAILED] Wrong password: {user.username} (no tracking - mode: {PROTECTION_MODE.name})")
         
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": "invalid_credentials",
+                "message": "Invalid username or password"
+            }
+        )
+
     else:
         if user.failed_attempts > 0:
             print(f"[SUCCESS] Password correct. Resetting failed attempts for {user.username}")
@@ -174,7 +184,10 @@ def verify_user_totp(user: User, totp_code: str, db: Session):
     if not verify_totp_code(user, totp_code):
         # In TOTP mode, we don't track failed attempts
         print(f"[TOTP] Invalid code for {user.username}")
-        raise HTTPException(status_code=401, detail="Invalid TOTP code")
+        raise HTTPException(
+                status_code=401,
+                detail={"error": "totp_required", "message": "Invalid TOTP code"}
+            )
     
     print(f"[TOTP] Validated for {user.username}")
 
