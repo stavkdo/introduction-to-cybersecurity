@@ -7,9 +7,9 @@ import os
 
 
 LOCAL_ADDRESS = 'http://127.0.0.1:8000'
-DO_PASSWORD_SPARYING = 0
-GROUP = 31
-FIRST_USER = 1
+DO_PASSWORD_SPARYING = 0 # 0 for brute force , 1 for password spraying
+LAST_USER = 31 # the last user to test
+FIRST_USER = 1 # the first user to test
 
 def load_common_password():
     base_dir = os.path.dirname(__file__)
@@ -183,7 +183,7 @@ def password_sparying(password, session, start_time,attempt_count):
     type = None
     i = FIRST_USER
     answer = 0
-    while answer != 200 and i < GROUP:
+    while answer != 200 and i < LAST_USER:
         #check attempts limit
         if attempt_count >= max_attempts:
             print("Reached maximum attempts limit.")
