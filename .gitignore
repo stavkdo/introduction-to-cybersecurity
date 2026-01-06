@@ -53,6 +53,7 @@ coverage.xml
 *.spec
 
 # Logs and databases
+*.log
 *.sqlite3
 
 # IDEs and editors
@@ -75,3 +76,5 @@ desktop.ini
 
 # Local application instance folder
 instance/
+
+sparying_plain_none.txt
