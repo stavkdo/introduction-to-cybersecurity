@@ -216,6 +216,76 @@ def check_rate_limit(ip: str, max_per_minute: int, endpoint: str):
     print(f"Rate limit OK: {ip} {len(endpoint_requests) + 1}/{max_per_minute} on {endpoint}")
 
 
+# Handle invalid CAPTCHA with correct password - dont increment failed_attempts
+def handle_invalid_captcha(user: User, db: Session, start_time: float, ip: str):
+    from app.helpers import log_attempt
+    from app.config import HashMode, AttackResult
+    import time
+    
+    code = generate_captcha_code(user.username, force_new=True)
+    image = generate_captcha_image(code)
+    
+    latency = (time.time() - start_time) * 1000
+    log_attempt(db, AttackResult.CAPTCHA_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
+    
+    print(f"CAPTCHA invalid, password correct: {user.username}")
+    
+    raise HTTPException(
+        status_code=403,
+        detail={
+            "error": "captcha_required",
+            "message": "Password correct but CAPTCHA invalid",
+            "captcha_image": image
+        }
+    )
+
+
+# Handle TOTP requirement - dont increment failed_attempts
+def handle_totp_required(user: User, db: Session, start_time: float, ip: str):
+    from app.helpers import log_attempt
+    from app.config import HashMode, AttackResult
+    import time
+    
+    totp_code = get_totp_code(user)
+    
+    latency = (time.time() - start_time) * 1000
+    log_attempt(db, AttackResult.TOTP_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
+    
+    print(f"TOTP required: {user.username}")
+    
+    raise HTTPException(
+        status_code=403,
+        detail={
+            "error": "totp_required",
+            "message": "Two-Factor Authentication required",
+            "totp_code": totp_code
+        }
+    )
+
+
+# Handle invalid TOTP - dont increment failed_attempts, keep same code
+def handle_invalid_totp(user: User, db: Session, start_time: float, ip: str):
+    from app.helpers import log_attempt
+    from app.config import HashMode, AttackResult
+    import time
+    
+    totp_code = get_totp_code(user)
+    
+    latency = (time.time() - start_time) * 1000
+    log_attempt(db, AttackResult.TOTP_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
+    
+    print(f"TOTP invalid, password correct: {user.username}")
+    
+    raise HTTPException(
+        status_code=401,
+        detail={
+            "error": "totp_required",
+            "message": "Invalid TOTP code - try again",
+            "totp_code": totp_code
+        }
+    )
+
+
 # Reset protection state on successful login
 def reset_protection_state(user: User, db: Session):
     user.failed_attempts = 0

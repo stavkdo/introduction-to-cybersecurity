@@ -23,7 +23,8 @@ from app.protection_service import (
     cleanup_stale_protection_data, validate_account_not_locked,
     requires_captcha, validate_captcha, requires_totp, ensure_totp_exists,
     get_totp_code, validate_totp, check_rate_limit, apply_lockout,
-    reset_protection_state, generate_captcha_code, generate_captcha_image
+    reset_protection_state, generate_captcha_code, generate_captcha_image,
+    handle_invalid_captcha, handle_totp_required, handle_invalid_totp
 )
 
 
@@ -38,7 +39,6 @@ app.add_middleware(
 )
 
 
-# REQUEST MODELS
 
 class RegisterRequest(BaseModel):
     username: str
@@ -103,40 +103,6 @@ def handle_failed_password(user: User, db: Session, start_time: float, ip: str):
         detail={"error": "invalid_credentials", "message": "Invalid username or password"}
     )
 
-
-# Handle invalid CAPTCHA with correct password
-def handle_invalid_captcha(user: User, db: Session, start_time: float, ip: str):
-    code = generate_captcha_code(user.username, force_new=True)
-    image = generate_captcha_image(code)
-    
-    latency = (time.time() - start_time) * 1000
-    log_attempt(db, AttackResult.CAPTCHA_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
-    
-    raise HTTPException(
-        status_code=403,
-        detail={
-            "error": "captcha_required",
-            "message": "Password correct but CAPTCHA invalid",
-            "captcha_image": image
-        }
-    )
-
-
-# Handle TOTP requirement
-def handle_totp_required(user: User, db: Session, start_time: float, ip: str):
-    totp_code = get_totp_code(user)
-    
-    latency = (time.time() - start_time) * 1000
-    log_attempt(db, AttackResult.TOTP_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
-    
-    raise HTTPException(
-        status_code=403,
-        detail={
-            "error": "totp_required",
-            "message": "Two-Factor Authentication required",
-            "totp_code": totp_code
-        }
-    )
 
 
 # Complete successful login
@@ -292,18 +258,22 @@ def login_totp(request: LoginTOTPRequest, http_request: Request, db: Session = D
         cleanup_stale_protection_data(user, db)
         validate_account_not_locked(user)
         
+        # Check CAPTCHA if required
         captcha_required = requires_captcha(user)
-        captcha_valid = validate_captcha(user, request.captcha_code)
         
+        if captcha_required:
+            captcha_valid = validate_captcha(user, request.captcha_code)
+            if not captcha_valid:
+                handle_invalid_captcha(user, db, start_time, ip)
+        
+        # Check password
         password_correct = validate_password(user, request.password)
         
         if not password_correct:
             ensure_totp_exists(user, db)
             handle_failed_password(user, db, start_time, ip)
         
-        if captcha_required and not captcha_valid:
-            handle_invalid_captcha(user, db, start_time, ip)
-        
+        # Check TOTP mode enabled
         if not requires_totp(user):
             raise HTTPException(
                 status_code=400,
@@ -312,10 +282,15 @@ def login_totp(request: LoginTOTPRequest, http_request: Request, db: Session = D
         
         ensure_totp_exists(user, db)
         
+        # Check if TOTP code provided
         if not request.totp_code:
             handle_totp_required(user, db, start_time, ip)
         
-        validate_totp(user, request.totp_code)
+        # Validate TOTP code
+        try:
+            validate_totp(user, request.totp_code)
+        except HTTPException:
+            handle_invalid_totp(user, db, start_time, ip)
         
         return handle_successful_login(user, db, start_time, ip)
     
