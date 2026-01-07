@@ -162,7 +162,7 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         latency = (time.time() - start_time) * 1000
         result = AttackResult.FAILED
 
-        # בדיקה אם detail הוא dict או string
+        # check if detail is dict or string
         if isinstance(http_exc.detail, dict):
             error_code = http_exc.detail.get("error")
             message = http_exc.detail.get("message", str(http_exc.detail))
@@ -178,7 +178,7 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
             elif error_code == "totp_required":
                 result = AttackResult.TOTP_REQUIRED
 
-        # CAPTCHA חדש רק אם במוד CAPTCHA
+        # generate new Captcha only if in CAPTCHA mode
         if user and PROTECTION_MODE == ProtectionMode.CAPTCHA:
             from app.protection_service import generate_captcha_code, generate_captcha_image
             new_code = generate_captcha_code(user.username, force_new=True)
@@ -199,8 +199,6 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         )
 
         raise
-
-
 
     
     except Exception as e:
@@ -271,7 +269,7 @@ def login_totp(request: LoginTOTPRequest, http_request: Request, db: Session = D
         latency = (time.time() - start_time) * 1000
         result = AttackResult.FAILED
 
-        # בדיקה אם detail הוא dict או string
+        # check if detail is dict or string
         if isinstance(http_exc.detail, dict):
             error_code = http_exc.detail.get("error")
             message = http_exc.detail.get("message", str(http_exc.detail))
@@ -287,7 +285,7 @@ def login_totp(request: LoginTOTPRequest, http_request: Request, db: Session = D
             elif error_code == "totp_required":
                 result = AttackResult.TOTP_REQUIRED
 
-        # CAPTCHA חדש רק אם במוד CAPTCHA
+        # generate new Captcha only if in CAPTCHA mode
         if user and PROTECTION_MODE == ProtectionMode.CAPTCHA:
             from app.protection_service import generate_captcha_code, generate_captcha_image
             new_code = generate_captcha_code(user.username, force_new=True)

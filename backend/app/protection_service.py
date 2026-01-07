@@ -95,18 +95,6 @@ def apply_lockout(user: User, db: Session):
             print(f"[LOCKOUT] {user.username} locked for {LOCKOUT_DURATION_MINUTES} min")
 
 
-# Reset on successful login
-def reset_protection_state(user: User, db: Session):
-    user.failed_attempts = 0
-    user.locked_until = None
-    
-    # Clear CAPTCHA if exists
-    if user.username in active_captcha_codes:
-        del active_captcha_codes[user.username]
-    
-    db.commit()
-    print(f"[RESET] {user.username} - failed_attempts reset to 0")
-
 # Generate random 5-character CAPTCHA code
 def generate_captcha_code(username: str, force_new: bool = False) -> str:
     # If forcing new or doesn't exist, generate fresh code
@@ -165,22 +153,6 @@ def get_totp_code(user: User) -> str:
         return user.totp_secret
     return None
 
-# Clean up protection data that's not needed for current mode
-def cleanup_stale_protection_data(user: User, db: Session):
-    changed = False
-    
-    if PROTECTION_MODE not in [ProtectionMode.LOCKOUT, ProtectionMode.CAPTCHA]:
-        if user.failed_attempts > 0:
-            user.failed_attempts = 0
-            changed = True
-        if user.locked_until is not None:
-            user.locked_until = None
-            changed = True
-    
-    if changed:
-        db.commit()
-        print(f"[CLEANUP] Cleared stale protection data for {user.username}")
-
 
 # Rate Limiting
 rate_limit_requests = {}
@@ -215,3 +187,42 @@ def check_rate_limit(ip: str, max_per_minute: int = 10, endpoint: str = "login")
     
     rate_limit_requests[ip].append((now, endpoint))
     print(f"[RATE_LIMIT] {ip} - {len(endpoint_requests) + 1}/{max_per_minute} requests for {endpoint}")
+
+
+# Reset on successful login
+def reset_protection_state(user: User, db: Session):
+    user.failed_attempts = 0
+    user.locked_until = None
+    
+    # Clear CAPTCHA if exists
+    if user.username in active_captcha_codes:
+        del active_captcha_codes[user.username]
+    
+    db.commit()
+    print(f"[RESET] {user.username} - failed_attempts reset to 0")
+
+
+# Clean up protection data that's not needed for current mode
+def cleanup_stale_protection_data(user: User, db: Session):
+    changed = False
+    
+    # If NOT in LOCKOUT or CAPTCHA mode → clear failed_attempts and lockout
+    if PROTECTION_MODE not in [ProtectionMode.LOCKOUT, ProtectionMode.CAPTCHA]:
+        if user.failed_attempts > 0:
+            user.failed_attempts = 0
+            changed = True
+            print(f"[CLEANUP] Reset failed_attempts for {user.username} (mode: {PROTECTION_MODE.name})")
+        
+        if user.locked_until is not None:
+            user.locked_until = None
+            changed = True
+            print(f"[CLEANUP] Cleared lockout for {user.username}")
+    
+    # If NOT in CAPTCHA mode → clear CAPTCHA codes from memory
+    if PROTECTION_MODE != ProtectionMode.CAPTCHA:
+        if user.username in active_captcha_codes:
+            del active_captcha_codes[user.username]
+            print(f"[CLEANUP] Cleared CAPTCHA code for {user.username}")
+    
+    if changed:
+        db.commit()
