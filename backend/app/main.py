@@ -263,7 +263,13 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         validate_account_not_locked(user)
         
         captcha_required = requires_captcha(user)
-        captcha_valid = validate_captcha(user, request.captcha_code)
+        
+        # If CAPTCHA required, validate it BEFORE checking password
+        if captcha_required:
+            captcha_valid = validate_captcha(user, request.captcha_code)
+            if not captcha_valid:
+                # Generate and show CAPTCHA
+                handle_invalid_captcha(user, db, start_time, ip)
         
         password_correct = validate_password(user, request.password)
         
