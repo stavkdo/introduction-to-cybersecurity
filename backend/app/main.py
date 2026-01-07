@@ -261,6 +261,10 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
         
         cleanup_stale_protection_data(user, db)
         validate_account_not_locked(user)
+
+        password_correct = validate_password(user, request.password)
+        if not password_correct:
+            handle_failed_password(user, db, start_time, ip)
         
         captcha_required = requires_captcha(user)
         
@@ -271,14 +275,7 @@ def login(request: LoginRequest, http_request: Request, db: Session = Depends(ge
                 # Generate and show CAPTCHA
                 handle_invalid_captcha(user, db, start_time, ip)
         
-        password_correct = validate_password(user, request.password)
-        
-        if not password_correct:
-            handle_failed_password(user, db, start_time, ip)
-        
-        if captcha_required and not captcha_valid:
-            handle_invalid_captcha(user, db, start_time, ip)
-        
+           
         if requires_totp(user):
             ensure_totp_exists(user, db)
             handle_totp_required(user, db, start_time, ip)
