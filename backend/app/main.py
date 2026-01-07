@@ -66,42 +66,99 @@ class LoginTOTPRequest(BaseModel):
 def handle_failed_password(user: User, db: Session, start_time: float, ip: str):
     print(f"Password failed: {user.username}")
     
-    # Increment attempts for LOCKOUT and CAPTCHA modes
-    if PROTECTION_MODE in [ProtectionMode.LOCKOUT, ProtectionMode.CAPTCHA]:
-        user.failed_attempts += 1
-        db.commit()
-        print(f"Failed attempts: {user.failed_attempts}")
+    match PROTECTION_MODE:
+        case ProtectionMode.TOTP:
+            # Show TOTP component even with wrong password
+            ensure_totp_exists(user, db)
+            totp_code = get_totp_code(user)
+            
+            latency = (time.time() - start_time) * 1000
+            log_attempt(db, AttackResult.TOTP_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
+            
+            print(f"TOTP required despite wrong password: {user.username}")
+            
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "totp_required",
+                    "message": "Invalid password. Please enter correct password and TOTP code.",
+                    "totp_code": totp_code
+                }
+            )
         
-        if PROTECTION_MODE == ProtectionMode.LOCKOUT:
-            apply_lockout(user, db)
-    
-    # Show CAPTCHA if threshold reached
-    if PROTECTION_MODE == ProtectionMode.CAPTCHA and user.failed_attempts >= MAX_CAPTCHA_FAILED_ATTEMPTS:
-        code = generate_captcha_code(user.username, force_new=True)
-        image = generate_captcha_image(code)
+        case ProtectionMode.LOCKOUT:
+            # Increment and check lockout threshold
+            user.failed_attempts += 1
+            db.commit()
+            print(f"Failed attempts: {user.failed_attempts}/{MAX_FAILED_ATTEMPTS}")
+            
+            if user.failed_attempts >= MAX_FAILED_ATTEMPTS:
+                apply_lockout(user, db)
+                
+                latency = (time.time() - start_time) * 1000
+                log_attempt(db, AttackResult.LOCKED, user.username, HashMode(user.hash_mode), latency, ip)
+                
+                print(f"Account locked: {user.username}")
+                
+                raise HTTPException(
+                    status_code=423,
+                    detail={
+                        "error": "Locked",
+                        "message": f"Account locked for {LOCKOUT_DURATION_MINUTES} minutes after {MAX_FAILED_ATTEMPTS} failed attempts"
+                    }
+                )
+            
+            # Regular failure
+            latency = (time.time() - start_time) * 1000
+            log_attempt(db, AttackResult.FAILED, user.username, HashMode(user.hash_mode), latency, ip)
+            
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "invalid_credentials", "message": "Invalid username or password"}
+            )
         
-        latency = (time.time() - start_time) * 1000
-        log_attempt(db, AttackResult.CAPTCHA_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
+        case ProtectionMode.CAPTCHA:
+            # Increment and check CAPTCHA threshold
+            user.failed_attempts += 1
+            db.commit()
+            print(f"Failed attempts: {user.failed_attempts}/{MAX_CAPTCHA_FAILED_ATTEMPTS}")
+            
+            if user.failed_attempts >= MAX_CAPTCHA_FAILED_ATTEMPTS:
+                code = generate_captcha_code(user.username, force_new=True)
+                image = generate_captcha_image(code)
+                
+                latency = (time.time() - start_time) * 1000
+                log_attempt(db, AttackResult.CAPTCHA_REQUIRED, user.username, HashMode(user.hash_mode), latency, ip)
+                
+                print(f"CAPTCHA required: {user.username}")
+                
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "error": "captcha_required",
+                        "message": "CAPTCHA required after multiple failed attempts",
+                        "captcha_image": image
+                    }
+                )
+            
+            # Regular failure
+            latency = (time.time() - start_time) * 1000
+            log_attempt(db, AttackResult.FAILED, user.username, HashMode(user.hash_mode), latency, ip)
+            
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "invalid_credentials", "message": "Invalid username or password"}
+            )
         
-        print(f"CAPTCHA required: {user.username} (attempts: {user.failed_attempts}/{MAX_CAPTCHA_FAILED_ATTEMPTS})")
-        
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "error": "captcha_required",
-                "message": "CAPTCHA required after multiple failed attempts",
-                "captcha_image": image
-            }
-        )
-    
-    # Regular failure
-    latency = (time.time() - start_time) * 1000
-    log_attempt(db, AttackResult.FAILED, user.username, HashMode(user.hash_mode), latency, ip)
-    
-    raise HTTPException(
-        status_code=401,
-        detail={"error": "invalid_credentials", "message": "Invalid username or password"}
-    )
+        case ProtectionMode.NONE | ProtectionMode.RATE_LIMITING:
+            # No tracking, just fail
+            latency = (time.time() - start_time) * 1000
+            log_attempt(db, AttackResult.FAILED, user.username, HashMode(user.hash_mode), latency, ip)
+            
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "invalid_credentials", "message": "Invalid username or password"}
+            )
 
 
 
