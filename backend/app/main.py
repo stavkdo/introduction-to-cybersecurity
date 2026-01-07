@@ -11,7 +11,7 @@ import traceback
 from app.database import get_db, User, AttemptLog
 from app.config import (
     GROUP_SEED, PROTECTION_MODE, HASH_MODE, PROJECT_NAME, FRONTEND_URL,
-    MAX_LOGIN_REQUESTS_PER_MINUTE, MAX_CAPTCHA_FAILED_ATTEMPTS,
+    MAX_LOGIN_REQUESTS_PER_MINUTE, MAX_CAPTCHA_FAILED_ATTEMPTS, MAX_FAILED_ATTEMPTS, LOCKOUT_DURATION_MINUTES,
     AttackResult, HashMode, PasswordStrength, ProtectionMode
 )
 from app.hash_utils import hash_password
